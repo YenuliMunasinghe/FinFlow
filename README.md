@@ -120,8 +120,8 @@ The frontend web application will be accessible at: `http://localhost:3000`
 
 - **ADMIN**: User provisioning, role assignments, society configuration, audit log inspection.
 - **PRESIDENT**: Financial review, budget approvals, transaction approvals/rejections, financial overview.
-- **TREASURER**: Event creation, budget drafting, income/expense submission, receipt uploads, financial reporting.
-- **COMMITTEE_MEMBER**: Expense & income submission with receipts, submission status tracking. *(Strictly prohibited from self-approvals).*
+- **TREASURER**: Event creation, budget drafting/editing, income/expense submission, receipt uploads, financial reporting.
+- **COMMITTEE_MEMBER**: Expense & income submission with receipts, event planning drafting, submission status tracking. *(Strictly prohibited from self-approvals).*
 
 ---
 
