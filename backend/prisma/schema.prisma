@@ -1,0 +1,151 @@
+// Prisma schema for FinFlow MS SQL Server Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PRESIDENT
+  TREASURER
+  COMMITTEE_MEMBER
+}
+
+enum EventStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CLOSED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                    String        @id @default(uuid())
+  memberId              String?       @unique // Student / Society Member ID
+  email                 String        @unique
+  passwordHash          String
+  name                  String
+  dob                   DateTime?     // Date of Birth
+  lastLogin             DateTime?     // Last login timestamp
+  role                  Role          @default(COMMITTEE_MEMBER)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relations
+  managedEvents         Event[]       @relation("EventManager")
+  submittedTransactions Transaction[] @relation("SubmittedTransactions")
+  approvedTransactions  Transaction[] @relation("ApprovedTransactions")
+  auditLogs             AuditLog[]
+}
+
+model Event {
+  id               String           @id @default(uuid())
+  name             String           // Event Name
+  venue            String?          // Event Venue
+  description      String?          @db.NVarChar(Max)
+  status           EventStatus      @default(DRAFT)
+  totalBudget      Decimal          @db.Decimal(18, 2) @default(0.00)
+  startDate        DateTime
+  endDate          DateTime
+  managedById      String           // Managed By User ID
+  managedBy        User             @relation("EventManager", fields: [managedById], references: [id])
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  // Relations
+  budgetItems      BudgetItem[]
+  transactions     Transaction[]
+  financialReports FinancialReport[]
+}
+
+model BudgetCategory {
+  id          String       @id @default(uuid())
+  name        String       @unique // e.g. Food, Transport, Venue, Equipment, Printing
+  description String?
+  createdAt   DateTime     @default(now())
+
+  // Relations
+  budgetItems BudgetItem[]
+}
+
+model BudgetItem {
+  id              String         @id @default(uuid())
+  eventId         String
+  event           Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  categoryId      String
+  category        BudgetCategory @relation(fields: [categoryId], references: [id])
+  itemName        String         // Budget Item name/description
+  quantity        Int            @default(1)
+  unitPrice       Decimal        @db.Decimal(18, 2)
+  allocatedAmount Decimal        @db.Decimal(18, 2) // quantity * unitPrice
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  // Relations
+  transactions    Transaction[]
+}
+
+model Transaction {
+  id                    String            @id @default(uuid())
+  title                 String
+  type                  TransactionType   // INCOME or EXPENSE
+  amount                Decimal           @db.Decimal(18, 2)
+  receiptUrl            String?           // Receipt image / PDF URL
+  status                TransactionStatus @default(PENDING) // Approval status
+  isOverBudget          Boolean           @default(false)   // Budget comparison flag
+  overrideJustification String?           @db.NVarChar(Max) // Justification if over budget
+  rejectionReason       String?           @db.NVarChar(Max)
+  
+  // Linked Event & Budget Item
+  eventId               String
+  event                 Event             @relation(fields: [eventId], references: [id])
+  budgetItemId          String?
+  budgetItem            BudgetItem?       @relation(fields: [budgetItemId], references: [id])
+
+  // Submitter & Approver
+  submittedById         String
+  submittedBy           User              @relation("SubmittedTransactions", fields: [submittedById], references: [id])
+  approvedById          String?
+  approvedBy            User?             @relation("ApprovedTransactions", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+}
+
+model FinancialReport {
+  id           String   @id @default(uuid())
+  year         Int      // Financial Year (e.g. 2026)
+  eventId      String?  // Linked Event (or null for annual summary)
+  event        Event?   @relation(fields: [eventId], references: [id])
+  totalIncome  Decimal  @db.Decimal(18, 2)
+  totalExpense Decimal  @db.Decimal(18, 2)
+  netProfit    Decimal  @db.Decimal(18, 2) // totalIncome - totalExpense
+  generatedAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String
+  entityId   String?
+  details    String?  @db.NVarChar(Max)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+}
