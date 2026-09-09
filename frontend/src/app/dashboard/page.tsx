@@ -2,447 +2,449 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Navigation from '@/components/Navigation';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardPage() {
-  const [activePeriod, setActivePeriod] = useState<'annual' | 'q1' | 'month'>('annual');
-  const [isExporting, setIsExporting] = useState(false);
+  const { user } = useAuth();
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'approved' | 'pending'>('all');
 
-  const handleExport = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      setIsExporting(false);
-      alert('FinFlow Executive Summary PDF compilation complete!');
-    }, 1500);
+  // Form states
+  const [expenseTitle, setExpenseTitle] = useState('');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState('Logistics');
+  const [incomeTitle, setIncomeTitle] = useState('');
+  const [incomeAmount, setIncomeAmount] = useState('');
+  const [incomeSource, setIncomeSource] = useState('Sponsorship');
+
+  const userDisplayName = user?.name || 'Kavinda Perera';
+
+  const handleExpenseSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    alert(`Expense Request "${expenseTitle}" for Rs. ${expenseAmount} submitted for executive approval!`);
+    setExpenseTitle('');
+    setExpenseAmount('');
+    setShowExpenseModal(false);
+  };
+
+  const handleIncomeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    alert(`Income Deposit "${incomeTitle}" for Rs. ${incomeAmount} recorded successfully!`);
+    setIncomeTitle('');
+    setIncomeAmount('');
+    setShowIncomeModal(false);
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col justify-between selection:bg-[#b3d1fd] selection:text-[#3b5a7f]">
-      
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-[#0e1c2f] text-white z-50 flex flex-col shadow-lg">
-        {/* Brand Header */}
-        <div className="p-4 flex items-center justify-between bg-white/5 border-b border-white/10">
-          <div className="flex flex-col">
-            <span className="font-['Hanken_Grotesk'] text-xl font-bold tracking-tight text-white leading-none">
-              Fin<span className="text-[#38BDF8]">Flow</span>
-            </span>
-            <span className="font-['JetBrains_Mono'] text-[9px] text-[#77849c] uppercase tracking-wider mt-1">
-              Society Treasury
-            </span>
-          </div>
-        </div>
-
-        {/* Active Society Scope */}
-        <div className="px-4 py-3 bg-white/5 border-b border-white/10">
-          <div className="bg-[#1c2d42] p-3 rounded-lg flex items-center justify-between">
-            <div className="flex flex-col min-w-0 pr-2">
-              <span className="font-['Inter'] text-[10px] font-bold text-[#77849c] uppercase truncate">
-                Engineering Society
+    <Navigation pageTitle="Society Dashboard">
+      <div className="space-y-6">
+        {/* Welcome Banner */}
+        <section className="bg-white p-6 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-['JetBrains_Mono'] text-[11px] text-[#426086] font-semibold uppercase tracking-wider">
+                Engineering Rotaract & Tech Club
               </span>
-              <span className="text-xs font-semibold text-white truncate">
-                Rotaract & Tech Club
-              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#c5c6cd]"></span>
+              <span className="font-['JetBrains_Mono'] text-[11px] text-[#44474c]">Semester FY 2024/2025</span>
             </div>
-            <span className="material-symbols-outlined text-[#77849c] text-sm">unfold_more</span>
+            <h2 className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight mt-1">
+              Welcome back, {userDisplayName}!
+            </h2>
+            <p className="text-xs text-[#44474c] mt-1">
+              Event-Driven Financial Management & Accounting for University Student Societies
+            </p>
           </div>
-        </div>
 
-        {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-          <nav className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-bold text-[#77849c] uppercase tracking-wider font-['Inter']">
-              Overview
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowExpenseModal(true)}
+              className="h-10 px-4 bg-[#0e1c2f] hover:bg-[#1a2d47] text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-xs"
+            >
+              <span className="material-symbols-outlined text-base">add</span>
+              <span>+ Submit Expense</span>
+            </button>
+            <button
+              onClick={() => setShowIncomeModal(true)}
+              className="h-10 px-4 bg-[#eff4ff] hover:bg-[#dce9ff] text-[#0b1c30] rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors border border-[#c5c6cd]/20"
+            >
+              <span className="material-symbols-outlined text-base text-[#426086]">south_west</span>
+              <span>+ Record Income</span>
+            </button>
+          </div>
+        </section>
+
+        {/* 4 Clean Metric Strip */}
+        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+          {/* Card 1: Operating Reserve */}
+          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#44474c] uppercase tracking-wider">
+                Operating Reserve
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#eff4ff] flex items-center justify-center text-[#0e1c2f]">
+                <span className="material-symbols-outlined text-base">account_balance</span>
+              </div>
+            </div>
+            <div className="my-3">
+              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
+                Rs. 485,250.00
+              </div>
+              <div className="text-xs text-[#44474c] mt-1">Society treasury account</div>
+            </div>
+            <div className="pt-2 border-t border-[#c5c6cd]/20 flex justify-between text-[11px] font-['JetBrains_Mono'] text-[#426086]">
+              <span>Bank A/C: LKR 460k</span>
+              <span>Petty Cash: LKR 25k</span>
+            </div>
+          </div>
+
+          {/* Card 2: Total Income */}
+          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#44474c] uppercase tracking-wider">
+                Total Inflow (Income)
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#10B981]/10 flex items-center justify-center text-[#10B981]">
+                <span className="material-symbols-outlined text-base">south_west</span>
+              </div>
+            </div>
+            <div className="my-3">
+              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
+                Rs. 1,245,000.00
+              </div>
+              <div className="text-xs text-[#10B981] font-semibold mt-1">✓ Sponsorships & Member Dues</div>
+            </div>
+            <div className="pt-2 border-t border-[#c5c6cd]/20 text-[11px] font-['JetBrains_Mono'] text-[#44474c]">
+              12 Deposits Recorded
+            </div>
+          </div>
+
+          {/* Card 3: Total Expenses */}
+          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#44474c] uppercase tracking-wider">
+                Total Outflow (Expenses)
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-[#ba1a1a]/10 flex items-center justify-center text-[#ba1a1a]">
+                <span className="material-symbols-outlined text-base">north_east</span>
+              </div>
+            </div>
+            <div className="my-3">
+              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
+                Rs. 759,750.00
+              </div>
+              <div className="text-xs text-[#44474c] mt-1">Disbursed event expenses</div>
+            </div>
+            <div className="pt-2 border-t border-[#c5c6cd]/20 text-[11px] font-['JetBrains_Mono'] text-[#44474c]">
+              24 Vouchers Cleared
+            </div>
+          </div>
+
+          {/* Card 4: Pending Sign-offs */}
+          <div className="bg-[#ffdad6]/30 p-5 rounded-xl shadow-xs border border-[#ba1a1a]/20 flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold text-[#93000a] uppercase tracking-wider">
+                Pending Sign-offs
+              </span>
+              <span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a] animate-pulse"></span>
+            </div>
+            <div className="my-3">
+              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30]">3 Requests</div>
+              <div className="text-xs font-bold text-[#93000a] mt-1">Rs. 62,500.00 Pending Release</div>
             </div>
             <Link
-              href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[#dce9ff] text-[#0b1c30] font-semibold text-xs transition-colors"
+              href="/approvals"
+              className="w-full py-2 bg-[#0e1c2f] text-white hover:bg-[#1a2d47] rounded-lg text-xs font-semibold text-center transition-colors shadow-xs"
             >
-              <span className="material-symbols-outlined text-sm">dashboard</span>
-              <span>Dashboard</span>
+              Review Approvals Queue →
             </Link>
-          </nav>
-
-          <nav className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-bold text-[#77849c] uppercase tracking-wider font-['Inter']">
-              Cashflow & Transactions
-            </div>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-xs font-medium transition-colors">
-              <span className="material-symbols-outlined text-sm">receipt_long</span>
-              <span>Transactions</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-xs font-medium transition-colors">
-              <span className="material-symbols-outlined text-sm">south_west</span>
-              <span>Income Management</span>
-            </a>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-xs font-medium transition-colors">
-              <span className="material-symbols-outlined text-sm">north_east</span>
-              <span>Expense Management</span>
-            </a>
-          </nav>
-
-          <nav className="space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-bold text-[#77849c] uppercase tracking-wider font-['Inter']">
-              Governance & Control
-            </div>
-            <Link href="/approvals" className="flex items-center justify-between px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-xs font-medium transition-colors">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-sm">verified_user</span>
-                <span>Approvals</span>
-              </div>
-              <span className="bg-[#ffdad6] text-[#93000a] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                3 Pending
-              </span>
-            </Link>
-            <a href="#" className="flex items-center gap-3 px-3 py-2 rounded-lg text-white/80 hover:bg-white/10 text-xs font-medium transition-colors">
-              <span className="material-symbols-outlined text-sm">account_balance_wallet</span>
-              <span>Budget Allocations</span>
-            </a>
-          </nav>
-        </div>
-
-        {/* Viewing Role Footer */}
-        <div className="p-3 bg-white/5 border-t border-white/10">
-          <div className="bg-[#1c2d42] p-3 rounded-lg flex flex-col gap-1">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-[#77849c] uppercase">Viewing As</span>
-              <span className="bg-[#b3d1fd] text-[#3b5a7f] text-[10px] font-bold px-2 py-0.5 rounded-full">Executive</span>
-            </div>
-            <div className="flex items-center justify-between text-white text-xs font-semibold">
-              <span>Society President</span>
-              <span className="material-symbols-outlined text-xs text-[#77849c]">swap_horiz</span>
-            </div>
           </div>
-        </div>
-      </aside>
+        </section>
 
-      {/* MAIN CONTENT AREA */}
-      <div className="pl-64 flex flex-col min-h-screen">
-        
-        {/* HEADER BAR */}
-        <header className="fixed top-0 left-64 right-0 h-16 bg-white/90 backdrop-blur-md shadow-xs z-40 flex items-center justify-between px-6 border-b border-[#c5c6cd]/20">
-          <div className="flex items-center gap-4 flex-1 max-w-xl">
-            <div className="relative w-full max-w-sm">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#44474c] text-base">search</span>
-              <input
-                type="text"
-                placeholder="Search vouchers, ledgers, events..."
-                className="w-full h-9 pl-10 pr-4 bg-[#eff4ff] rounded-lg text-xs text-[#0b1c30] placeholder:text-[#44474c] focus:outline-none focus:ring-1 focus:ring-[#426086]"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex flex-col items-end px-3 py-1 bg-[#eff4ff] rounded-lg">
-              <span className="text-[10px] font-semibold text-[#44474c] uppercase">Society Balance</span>
-              <span className="font-['JetBrains_Mono'] text-xs font-bold text-[#0b1c30]">Rs. 485,250.00</span>
-            </div>
-            <div className="flex items-center gap-2 pl-2 cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-[#0e1c2f] text-white flex items-center justify-center text-xs font-bold">
-                KP
-              </div>
-              <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-semibold text-[#0b1c30] leading-tight">Kavinda Perera</span>
-                <span className="text-[10px] text-[#44474c]">Society President</span>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* MAIN BODY DASHBOARD */}
-        <main className="w-full pt-20 px-6 py-6 flex-1 flex flex-col space-y-6">
-          
-          {/* Executive Header Banner */}
-          <section className="w-full bg-white p-6 rounded-xl shadow-sm border border-[#c5c6cd]/30 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="font-['JetBrains_Mono'] text-[11px] text-[#426086] font-semibold uppercase tracking-wider">
-                  Engineering Rotaract & Tech Society
-                </span>
-                <span className="w-1 h-1 rounded-full bg-[#c5c6cd]"></span>
-                <span className="font-['JetBrains_Mono'] text-[11px] text-[#44474c]">FY 2024/2025</span>
-              </div>
-              <h1 className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                Welcome back, Kavinda!
-              </h1>
-              <p className="text-xs text-[#44474c]">
-                Here is your society financial summary and active ledger state for the current semester.
-              </p>
+        {/* Recent Transactions Journal */}
+        <section className="bg-white rounded-xl shadow-xs border border-[#c5c6cd]/30 overflow-hidden">
+          <div className="p-5 border-b border-[#c5c6cd]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-[#0b1c30]">
+                Recent Society Transactions
+              </h3>
+              <p className="text-xs text-[#44474c]">General ledger entries for active society accounts</p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="inline-flex p-1 bg-[#eff4ff] rounded-lg">
-                {(['annual', 'q1', 'month'] as const).map((period) => (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex p-1 bg-[#eff4ff] rounded-lg text-xs">
+                {(['all', 'approved', 'pending'] as const).map((filter) => (
                   <button
-                    key={period}
-                    onClick={() => setActivePeriod(period)}
-                    className={`px-3 py-1 text-xs font-medium rounded-lg transition-all ${
-                      activePeriod === period
-                        ? 'bg-white text-[#0b1c30] shadow-sm'
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={`px-3 py-1 font-medium rounded-md transition-colors ${
+                      activeFilter === filter
+                        ? 'bg-white text-[#0b1c30] font-bold shadow-xs'
                         : 'text-[#44474c] hover:text-[#0b1c30]'
                     }`}
                   >
-                    {period === 'annual' ? 'Annual' : period === 'q1' ? 'Q1' : 'This Month'}
+                    {filter === 'all' ? 'All' : filter === 'approved' ? 'Approved' : 'Pending'}
                   </button>
                 ))}
               </div>
-              <button
-                onClick={handleExport}
-                disabled={isExporting}
-                className="h-9 px-4 bg-[#eff4ff] hover:bg-[#dce9ff] text-[#0b1c30] rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-sm"
+              <Link
+                href="/transactions"
+                className="px-3.5 py-1.5 bg-[#eff4ff] hover:bg-[#dce9ff] text-[#0b1c30] text-xs font-semibold rounded-lg transition-colors"
               >
-                <span className="material-symbols-outlined text-base text-[#426086]">picture_as_pdf</span>
-                <span>{isExporting ? 'Exporting...' : 'Export Summary'}</span>
+                View All →
+              </Link>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#eff4ff] text-[#44474c] uppercase font-semibold text-[10px]">
+                <tr>
+                  <th className="p-4">Reference & Date</th>
+                  <th className="p-4">Description & Event</th>
+                  <th className="p-4">Category</th>
+                  <th className="p-4 text-right">Amount (LKR)</th>
+                  <th className="p-4">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#c5c6cd]/20">
+                <tr className="hover:bg-[#eff4ff]/50 transition-colors">
+                  <td className="p-4 font-['JetBrains_Mono']">
+                    <div className="font-bold text-[#0b1c30]">#TRX-2024-089</div>
+                    <div className="text-[10px] text-[#44474c]">Today, 10:24 AM</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold text-[#0b1c30]">Dialog Axiata Sponsorship Deposit</div>
+                    <div className="text-[11px] text-[#44474c]">Annual Tech Symposium 2024</div>
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#10B981]/10 text-[#10B981] font-bold text-[10px]">
+                      Sponsorship
+                    </span>
+                  </td>
+                  <td className="p-4 text-right font-['JetBrains_Mono'] font-bold text-[#10B981]">
+                    + Rs. 150,000.00
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#e5eeff] text-[#0e1c2f] font-bold text-[10px]">
+                      Cleared & Approved
+                    </span>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-[#eff4ff]/50 transition-colors bg-[#eff4ff]/30">
+                  <td className="p-4 font-['JetBrains_Mono']">
+                    <div className="font-bold text-[#0b1c30]">#TRX-2024-088</div>
+                    <div className="text-[10px] text-[#44474c]">Yesterday, 04:12 PM</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold text-[#0b1c30]">Stage Sound & Lights Rental</div>
+                    <div className="text-[11px] text-[#44474c]">Sonic Pro Audio (Pvt) Ltd</div>
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#44474c] font-bold text-[10px]">
+                      Logistics
+                    </span>
+                  </td>
+                  <td className="p-4 text-right font-['JetBrains_Mono'] font-bold text-[#ba1a1a]">
+                    - Rs. 28,500.00
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#ffdad6] text-[#93000a] font-bold text-[10px]">
+                      Pending President Sign-off
+                    </span>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-[#eff4ff]/50 transition-colors">
+                  <td className="p-4 font-['JetBrains_Mono']">
+                    <div className="font-bold text-[#0b1c30]">#TRX-2024-087</div>
+                    <div className="text-[10px] text-[#44474c]">Jun 16 • 02:00 PM</div>
+                  </td>
+                  <td className="p-4">
+                    <div className="font-bold text-[#0b1c30]">Workshop Certificates Printing</div>
+                    <div className="text-[11px] text-[#44474c]">University Press</div>
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#44474c] font-bold text-[10px]">
+                      Printing & Stationery
+                    </span>
+                  </td>
+                  <td className="p-4 text-right font-['JetBrains_Mono'] font-bold text-[#ba1a1a]">
+                    - Rs. 14,000.00
+                  </td>
+                  <td className="p-4">
+                    <span className="px-2.5 py-1 rounded-full bg-[#e5eeff] text-[#0e1c2f] font-bold text-[10px]">
+                      Cleared & Approved
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      {/* SUBMIT EXPENSE MODAL */}
+      {showExpenseModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white max-w-md w-full rounded-xl shadow-xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-[#c5c6cd]/20">
+              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-[#0b1c30]">
+                Submit Expense Claim
+              </h3>
+              <button
+                onClick={() => setShowExpenseModal(false)}
+                className="text-[#44474c] hover:text-[#0b1c30]"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
               </button>
             </div>
-          </section>
 
-          {/* Primary KPI Cards (4 Grid) */}
-          <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-            
-            {/* KPI 1: Inflow */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-[#c5c6cd]/30 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#44474c] uppercase tracking-wider">Total Income / Inflow</span>
-                <div className="w-8 h-8 rounded-lg bg-[#eff4ff] flex items-center justify-center text-[#426086]">
-                  <span className="material-symbols-outlined text-base">south_west</span>
-                </div>
-              </div>
-              <div className="my-3">
-                <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                  Rs. 1,245,000.00
-                </div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <span className="px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] text-[11px] font-semibold flex items-center gap-1">
-                    <span className="material-symbols-outlined text-xs">trending_up</span> +18.4%
-                  </span>
-                  <span className="text-xs text-[#44474c]">vs last term</span>
-                </div>
-              </div>
-              <div className="font-['JetBrains_Mono'] text-[11px] text-[#426086]">Sponsorships & Member Dues</div>
-            </div>
-
-            {/* KPI 2: Outflow */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-[#c5c6cd]/30 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#44474c] uppercase tracking-wider">Total Expenses / Outflow</span>
-                <div className="w-8 h-8 rounded-lg bg-[#eff4ff] flex items-center justify-center text-[#ba1a1a]">
-                  <span className="material-symbols-outlined text-base">north_east</span>
-                </div>
-              </div>
-              <div className="my-3">
-                <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                  Rs. 759,750.00
-                </div>
-                <div className="text-xs text-[#44474c] mt-1">Approved disbursements</div>
-              </div>
-              <div className="font-['JetBrains_Mono'] text-[11px] text-[#44474c]">Logistics: 65% • Ops: 25%</div>
-            </div>
-
-            {/* KPI 3: Net Operating Balance */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-[#c5c6cd]/30 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-[#44474c] uppercase tracking-wider">Net Operating Balance</span>
-                <div className="w-8 h-8 rounded-lg bg-[#eff4ff] flex items-center justify-center text-[#0e1c2f]">
-                  <span className="material-symbols-outlined text-base">account_balance</span>
-                </div>
-              </div>
-              <div className="my-3">
-                <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                  Rs. 485,250.00
-                </div>
-                <div className="font-['JetBrains_Mono'] text-[11px] text-[#44474c] mt-1">Society Treasury Reserve</div>
-              </div>
-              <div className="p-2 bg-[#eff4ff] rounded text-[11px] font-['JetBrains_Mono'] flex justify-between">
-                <span>Bank A/C: Rs. 460,250.00</span>
-                <span>Petty: Rs. 25,000</span>
-              </div>
-            </div>
-
-            {/* KPI 4: Pending Approvals */}
-            <div className="bg-[#ffdad6]/40 p-5 rounded-xl shadow-sm border border-[#ba1a1a]/20 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-[#93000a] uppercase tracking-wider">Pending Sign-offs</span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a] animate-pulse"></span>
-              </div>
-              <div className="my-3">
-                <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30]">3 Requests</div>
-                <div className="font-['JetBrains_Mono'] text-xs font-semibold text-[#93000a] mt-1">
-                  Rs. 62,500.00 Pending Release
-                </div>
-              </div>
-              <button className="w-full py-2 bg-[#0e1c2f] text-white hover:bg-[#1a2d47] rounded-lg text-xs font-semibold transition-colors shadow-sm">
-                Review Approvals
-              </button>
-            </div>
-
-          </section>
-
-          {/* Workflow Stepper Card */}
-          <section className="w-full bg-white p-6 rounded-xl shadow-sm border border-[#c5c6cd]/30 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <form onSubmit={handleExpenseSubmit} className="space-y-4">
               <div>
-                <h2 className="font-['Hanken_Grotesk'] text-lg font-semibold text-[#0b1c30]">Society Transaction Workflow</h2>
-                <p className="text-xs text-[#44474c]">Standard Operating Procedure for Society Financial Management</p>
-              </div>
-              <div className="flex items-center gap-1 font-['JetBrains_Mono'] text-xs text-[#426086]">
-                <span className="material-symbols-outlined text-base">verified</span>
-                <span>Dual Approval Protection Active</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
-              <div className="p-4 rounded-lg bg-[#eff4ff] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-full bg-[#dce9ff] text-[#0b1c30] font-bold text-xs flex items-center justify-center">01</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white text-[#44474c]">Draft</span>
-                </div>
-                <div className="text-xs font-bold text-[#0b1c30]">1. Transaction Submission</div>
-                <p className="text-[11px] text-[#44474c]">Committee member logs expense/income request with supporting receipts.</p>
+                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
+                  Expense Title / Description
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Sound Equipment Rental"
+                  value={expenseTitle}
+                  onChange={(e) => setExpenseTitle(e.target.value)}
+                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
+                />
               </div>
 
-              <div className="p-4 rounded-lg bg-[#b3d1fd]/30 space-y-2 border border-[#426086]/20">
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-full bg-[#426086] text-white font-bold text-xs flex items-center justify-center">02</span>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#b3d1fd] text-[#3b5a7f]">3 Active</span>
-                </div>
-                <div className="text-xs font-bold text-[#0b1c30]">2. President Review</div>
-                <p className="text-[11px] text-[#44474c]">President checks budget variance and signs off or requests revision.</p>
+              <div>
+                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
+                  Amount (LKR)
+                </label>
+                <input
+                  type="number"
+                  required
+                  placeholder="e.g. 15000"
+                  value={expenseAmount}
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
+                />
               </div>
 
-              <div className="p-4 rounded-lg bg-[#eff4ff] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-full bg-[#0e1c2f] text-white font-bold text-xs flex items-center justify-center">03</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white text-[#44474c]">Cleared</span>
-                </div>
-                <div className="text-xs font-bold text-[#0b1c30]">3. Treasurer Disbursement</div>
-                <p className="text-[11px] text-[#44474c]">Treasurer executes payment and posts transaction to general ledger.</p>
+              <div>
+                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">Category</label>
+                <select
+                  value={expenseCategory}
+                  onChange={(e) => setExpenseCategory(e.target.value)}
+                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
+                >
+                  <option value="Logistics">Logistics & Venue</option>
+                  <option value="Catering">Food & Refreshments</option>
+                  <option value="Printing">Printing & Stationery</option>
+                  <option value="Marketing">Promotions & Marketing</option>
+                  <option value="Miscellaneous">Miscellaneous</option>
+                </select>
               </div>
 
-              <div className="p-4 rounded-lg bg-[#eff4ff] space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="w-6 h-6 rounded-full bg-[#c5c6cd] text-[#0b1c30] font-bold text-xs flex items-center justify-center">04</span>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-white text-[#44474c]">Audit Log</span>
-                </div>
-                <div className="text-xs font-bold text-[#0b1c30]">4. Immutable Audit Log</div>
-                <p className="text-[11px] text-[#44474c]">Immutable trail recorded for permanent society audit trail.</p>
-              </div>
-            </div>
-          </section>
-
-          {/* Recent Transactions & Actions (Split Layout) */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            
-            {/* Table Column */}
-            <div className="lg:col-span-8 bg-white rounded-xl shadow-sm border border-[#c5c6cd]/30 overflow-hidden">
-              <div className="p-5 border-b border-[#c5c6cd]/20 flex items-center justify-between">
-                <div>
-                  <h2 className="font-['Hanken_Grotesk'] text-lg font-semibold text-[#0b1c30]">Recent Society Transactions</h2>
-                  <p className="text-xs text-[#44474c]">Recorded journal log for active society accounts</p>
-                </div>
-                <button className="px-3 py-1.5 bg-[#eff4ff] text-[#0b1c30] text-xs font-semibold rounded-lg hover:bg-[#dce9ff] transition-colors">
-                  View All Entries
+              <div className="pt-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowExpenseModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-[#44474c] hover:text-[#0b1c30]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#0e1c2f] hover:bg-[#1a2d47] text-white rounded-lg text-xs font-semibold"
+                >
+                  Submit for Sign-off
                 </button>
               </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#eff4ff] text-[#44474c] uppercase font-semibold text-[10px]">
-                    <tr>
-                      <th className="p-3">Ref / Date</th>
-                      <th className="p-3">Description & Event</th>
-                      <th className="p-3">Category</th>
-                      <th className="p-3 text-right">Amount (LKR)</th>
-                      <th className="p-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#c5c6cd]/20">
-                    <tr className="hover:bg-[#eff4ff]/50">
-                      <td className="p-3 font-['JetBrains_Mono']">
-                        <div className="font-bold text-[#0b1c30]">#TRX-2024-089</div>
-                        <div className="text-[10px] text-[#44474c]">Jun 18 • 10:24 AM</div>
-                      </td>
-                      <td className="p-3">
-                        <div className="font-bold text-[#0b1c30]">Dialog Axiata Sponsorship</div>
-                        <div className="text-[11px] text-[#44474c]">Annual Tech Symposium 2024</div>
-                      </td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-full bg-[#10B981]/10 text-[#10B981] font-semibold text-[10px]">
-                          Sponsorship
-                        </span>
-                      </td>
-                      <td className="p-3 text-right font-['JetBrains_Mono'] font-bold text-[#10B981]">
-                        + Rs. 150,000.00
-                      </td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-full bg-[#e5eeff] text-[#0b1c30] font-semibold text-[10px]">
-                          Approved
-                        </span>
-                      </td>
-                    </tr>
-
-                    <tr className="hover:bg-[#eff4ff]/50 bg-[#eff4ff]/30">
-                      <td className="p-3 font-['JetBrains_Mono']">
-                        <div className="font-bold text-[#0b1c30]">#TRX-2024-088</div>
-                        <div className="text-[10px] text-[#44474c]">Jun 17 • 04:12 PM</div>
-                      </td>
-                      <td className="p-3">
-                        <div className="font-bold text-[#0b1c30]">Stage Sound & Lights Rental</div>
-                        <div className="text-[11px] text-[#44474c]">Electro Sound Systems (Pvt) Ltd</div>
-                      </td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-full bg-[#eff4ff] text-[#44474c] font-semibold text-[10px]">
-                          Logistics
-                        </span>
-                      </td>
-                      <td className="p-3 text-right font-['JetBrains_Mono'] font-bold text-[#ba1a1a]">
-                        - Rs. 35,000.00
-                      </td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-full bg-[#ffdad6] text-[#93000a] font-bold text-[10px]">
-                          Pending Sign-off
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Quick Actions Right Column */}
-            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-[#c5c6cd]/30 space-y-4">
-                <div>
-                  <h3 className="font-['Hanken_Grotesk'] text-base font-bold text-[#0b1c30]">Quick Actions</h3>
-                  <p className="text-xs text-[#44474c]">Execute treasury operations</p>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <button className="p-3 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] text-left transition-colors space-y-1">
-                    <span className="material-symbols-outlined text-[#0e1c2f] text-lg">add_card</span>
-                    <div className="text-xs font-bold text-[#0b1c30]">New Expense</div>
-                    <div className="text-[10px] text-[#44474c]">Submit request</div>
-                  </button>
-                  <button className="p-3 rounded-lg bg-[#eff4ff] hover:bg-[#dce9ff] text-left transition-colors space-y-1">
-                    <span className="material-symbols-outlined text-[#426086] text-lg">receipt</span>
-                    <div className="text-xs font-bold text-[#0b1c30]">Add Income</div>
-                    <div className="text-[10px] text-[#44474c]">Record deposit</div>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-          </section>
-
-        </main>
-
-        {/* Footer */}
-        <footer className="w-full bg-[#eff4ff] border-t border-[#c5c6cd]/30 py-3 px-6">
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#44474c]">
-            <span className="font-['JetBrains_Mono'] text-[11px]">FINFLOW SYSTEM INSTANCE #ENG-SOC-01</span>
-            <span>FinFlow — Student Society Accounting System</span>
+            </form>
           </div>
-        </footer>
+        </div>
+      )}
 
-      </div>
-    </div>
+      {/* RECORD INCOME MODAL */}
+      {showIncomeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+          <div className="bg-white max-w-md w-full rounded-xl shadow-xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3 border-[#c5c6cd]/20">
+              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-[#0b1c30]">
+                Record Income Deposit
+              </h3>
+              <button
+                onClick={() => setShowIncomeModal(false)}
+                className="text-[#44474c] hover:text-[#0b1c30]"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            <form onSubmit={handleIncomeSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
+                  Income Title / Source
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Platinum Sponsorship Deposit"
+                  value={incomeTitle}
+                  onChange={(e) => setIncomeTitle(e.target.value)}
+                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
+                  Amount (LKR)
+                </label>
+                <input
+                  type="number"
+                  required
+                  placeholder="e.g. 50000"
+                  value={incomeAmount}
+                  onChange={(e) => setIncomeAmount(e.target.value)}
+                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">Source Type</label>
+                <select
+                  value={incomeSource}
+                  onChange={(e) => setIncomeSource(e.target.value)}
+                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
+                >
+                  <option value="Sponsorship">Corporate Sponsorship</option>
+                  <option value="Member Dues">Member Registration Dues</option>
+                  <option value="Ticket Sales">Event Ticket Sales</option>
+                  <option value="Faculty Grant">Faculty / University Grant</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowIncomeModal(false)}
+                  className="px-4 py-2 text-xs font-semibold text-[#44474c] hover:text-[#0b1c30]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-lg text-xs font-semibold"
+                >
+                  Record Deposit
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </Navigation>
   );
 }
