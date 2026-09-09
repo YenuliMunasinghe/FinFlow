@@ -1,5 +1,5 @@
 import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
-import { Role } from '@prisma/client';
+import { Role } from '../roles.decorator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Please provide a valid email address.' })

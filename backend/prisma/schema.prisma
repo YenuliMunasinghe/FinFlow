@@ -9,32 +9,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  ADMIN
-  PRESIDENT
-  TREASURER
-  COMMITTEE_MEMBER
-}
-
-enum EventStatus {
-  DRAFT
-  SUBMITTED
-  APPROVED
-  REJECTED
-  CLOSED
-}
-
-enum TransactionType {
-  INCOME
-  EXPENSE
-}
-
-enum TransactionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 model User {
   id                    String        @id @default(uuid())
   memberId              String?       @unique // Student / Society Member ID
@@ -43,7 +17,7 @@ model User {
   name                  String
   dob                   DateTime?     // Date of Birth
   lastLogin             DateTime?     // Last login timestamp
-  role                  Role          @default(COMMITTEE_MEMBER)
+  role                  String        @default("COMMITTEE_MEMBER") // Role: ADMIN, PRESIDENT, TREASURER, COMMITTEE_MEMBER
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
 
@@ -59,12 +33,12 @@ model Event {
   name             String           // Event Name
   venue            String?          // Event Venue
   description      String?          @db.NVarChar(Max)
-  status           EventStatus      @default(DRAFT)
+  status           String           @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, CLOSED
   totalBudget      Decimal          @db.Decimal(18, 2) @default(0.00)
   startDate        DateTime
   endDate          DateTime
   managedById      String           // Managed By User ID
-  managedBy        User             @relation("EventManager", fields: [managedById], references: [id])
+  managedBy        User             @relation("EventManager", fields: [managedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -87,9 +61,9 @@ model BudgetCategory {
 model BudgetItem {
   id              String         @id @default(uuid())
   eventId         String
-  event           Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  event           Event          @relation(fields: [eventId], references: [id], onDelete: Cascade, onUpdate: NoAction)
   categoryId      String
-  category        BudgetCategory @relation(fields: [categoryId], references: [id])
+  category        BudgetCategory @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   itemName        String         // Budget Item name/description
   quantity        Int            @default(1)
   unitPrice       Decimal        @db.Decimal(18, 2)
@@ -104,23 +78,23 @@ model BudgetItem {
 model Transaction {
   id                    String            @id @default(uuid())
   title                 String
-  type                  TransactionType   // INCOME or EXPENSE
+  type                  String            // INCOME or EXPENSE
   amount                Decimal           @db.Decimal(18, 2)
   receiptUrl            String?           // Receipt image / PDF URL
-  status                TransactionStatus @default(PENDING) // Approval status
+  status                String            @default("PENDING") // PENDING, APPROVED, REJECTED
   isOverBudget          Boolean           @default(false)   // Budget comparison flag
   overrideJustification String?           @db.NVarChar(Max) // Justification if over budget
   rejectionReason       String?           @db.NVarChar(Max)
   
   // Linked Event & Budget Item
   eventId               String
-  event                 Event             @relation(fields: [eventId], references: [id])
+  event                 Event             @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   budgetItemId          String?
-  budgetItem            BudgetItem?       @relation(fields: [budgetItemId], references: [id])
+  budgetItem            BudgetItem?       @relation(fields: [budgetItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   // Submitter & Approver
   submittedById         String
-  submittedBy           User              @relation("SubmittedTransactions", fields: [submittedById], references: [id])
+  submittedBy           User              @relation("SubmittedTransactions", fields: [submittedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
   approvedById          String?
   approvedBy            User?             @relation("ApprovedTransactions", fields: [approvedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
@@ -132,7 +106,7 @@ model FinancialReport {
   id           String   @id @default(uuid())
   year         Int      // Financial Year (e.g. 2026)
   eventId      String?  // Linked Event (or null for annual summary)
-  event        Event?   @relation(fields: [eventId], references: [id])
+  event        Event?   @relation(fields: [eventId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   totalIncome  Decimal  @db.Decimal(18, 2)
   totalExpense Decimal  @db.Decimal(18, 2)
   netProfit    Decimal  @db.Decimal(18, 2) // totalIncome - totalExpense
@@ -146,6 +120,6 @@ model AuditLog {
   entityId   String?
   details    String?  @db.NVarChar(Max)
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdAt  DateTime @default(now())
 }
