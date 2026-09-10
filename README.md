@@ -69,7 +69,6 @@ FinFlow/
 
 - **Node.js**: `v20.x` or higher
 - **npm**: `v10.x` or higher
-- **Microsoft SQL Server**: Local instance or Docker container
 
 ---
 
@@ -130,4 +129,4 @@ The frontend web application will be accessible at: `http://localhost:3000`
 All feature work follows the feature-branching standard:
 - `development` : Main integration branch
 - `feature/<phase-or-feature-name>` : Isolated feature development
-- `fix/<issue-name>` : Bug fixes
+
