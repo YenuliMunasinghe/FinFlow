@@ -6,7 +6,7 @@ FinFlow combines enterprise accounting principles with modern software engineeri
 
 ---
 
-## 🌟 Core Business Concept & Workflow
+##  Core Business Concept & Workflow
 
 $$\text{PLAN} \longrightarrow \text{BUDGET} \longrightarrow \text{TRANSACTION} \longrightarrow \text{REVIEW} \longrightarrow \text{APPROVAL} \longrightarrow \text{ACCOUNTING} \longrightarrow \text{ANALYSIS} \longrightarrow \text{REPORTING}$$
 
@@ -22,7 +22,7 @@ $$\text{PLAN} \longrightarrow \text{BUDGET} \longrightarrow \text{TRANSACTION} \
 
 ---
 
-## 🏗️ Architecture & Technology Stack
+##  Architecture & Technology Stack
 
 | Component | Technology | Description |
 |---|---|---|
@@ -37,7 +37,7 @@ $$\text{PLAN} \longrightarrow \text{BUDGET} \longrightarrow \text{TRANSACTION} \
 
 ---
 
-## 📁 Repository Structure
+##  Repository Structure
 
 ```text
 FinFlow/
@@ -63,7 +63,7 @@ FinFlow/
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -116,16 +116,16 @@ The frontend web application will be accessible at: `http://localhost:3000`
 
 ---
 
-## 🔐 User Roles & Permissions
+##  User Roles & Permissions
 
 - **ADMIN**: User provisioning, role assignments, society configuration, audit log inspection.
 - **PRESIDENT**: Financial review, budget approvals, transaction approvals/rejections, financial overview.
-- **TREASURER**: Event creation, budget drafting, income/expense submission, receipt uploads, financial reporting.
-- **COMMITTEE_MEMBER**: Expense & income submission with receipts, submission status tracking. *(Strictly prohibited from self-approvals).*
+- **TREASURER**: Event creation, budget drafting/editing, income/expense submission, receipt uploads, financial reporting.
+- **COMMITTEE_MEMBER**: Expense & income submission with receipts, event planning drafting, submission status tracking. *(Strictly prohibited from self-approvals).*
 
 ---
 
-## 📜 Branching & Contributing Strategy
+##  Branching & Contributing Strategy
 
 All feature work follows the feature-branching standard:
 - `development` : Main integration branch
