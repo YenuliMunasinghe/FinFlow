@@ -91,8 +91,13 @@ export class EventsService {
             id: e.id,
             title: e.name,
             code: `EVT-${e.id.slice(0, 6).toUpperCase()}`,
-            status: e.status === 'DRAFT' || e.status === 'APPROVED' ? 'ACTIVE' : (e.status as any),
-            date: e.startDate ? e.startDate.toISOString().split('T')[0] : '2024-10-15',
+            status:
+              e.status === 'DRAFT' || e.status === 'APPROVED'
+                ? 'ACTIVE'
+                : (e.status as any),
+            date: e.startDate
+              ? e.startDate.toISOString().split('T')[0]
+              : '2024-10-15',
             allocated: Number(e.totalBudget),
             spent: 0,
             categories: e.budgetItems.map((b) => ({
@@ -104,7 +109,9 @@ export class EventsService {
         }
       }
     } catch (error) {
-      this.logger.warn(`Database query failed, serving memory events fallback: ${error.message}`);
+      this.logger.warn(
+        `Database query failed, serving memory events fallback: ${error.message}`,
+      );
     }
 
     return this.localEventsStore;
@@ -129,8 +136,13 @@ export class EventsService {
             id: event.id,
             title: event.name,
             code: `EVT-${event.id.slice(0, 6).toUpperCase()}`,
-            status: event.status === 'DRAFT' || event.status === 'APPROVED' ? 'ACTIVE' : (event.status as any),
-            date: event.startDate ? event.startDate.toISOString().split('T')[0] : '2024-10-15',
+            status:
+              event.status === 'DRAFT' || event.status === 'APPROVED'
+                ? 'ACTIVE'
+                : (event.status as any),
+            date: event.startDate
+              ? event.startDate.toISOString().split('T')[0]
+              : '2024-10-15',
             allocated: Number(event.totalBudget),
             spent: 0,
             categories: event.budgetItems.map((b) => ({
@@ -153,7 +165,8 @@ export class EventsService {
   }
 
   async create(createEventDto: CreateEventDto) {
-    const { title, description, startDate, endDate, totalBudget } = createEventDto;
+    const { title, description, startDate, endDate, totalBudget } =
+      createEventDto;
 
     try {
       if (this.prisma.isDbAvailable()) {
@@ -180,14 +193,24 @@ export class EventsService {
             allocated: Number(createdEvent.totalBudget),
             spent: 0,
             categories: [
-              { name: 'Logistics & Venue', allocated: Number(totalBudget) * 0.5, spent: 0 },
-              { name: 'Marketing & Catering', allocated: Number(totalBudget) * 0.5, spent: 0 },
+              {
+                name: 'Logistics & Venue',
+                allocated: Number(totalBudget) * 0.5,
+                spent: 0,
+              },
+              {
+                name: 'Marketing & Catering',
+                allocated: Number(totalBudget) * 0.5,
+                spent: 0,
+              },
             ],
           };
         }
       }
     } catch (error) {
-      this.logger.warn(`Database create failed, using local store: ${error.message}`);
+      this.logger.warn(
+        `Database create failed, using local store: ${error.message}`,
+      );
     }
 
     const newLocalEvent: DefaultEventData = {
@@ -199,8 +222,16 @@ export class EventsService {
       allocated: Number(totalBudget),
       spent: 0,
       categories: [
-        { name: 'Logistics & Venue', allocated: Number(totalBudget) * 0.5, spent: 0 },
-        { name: 'Marketing & Catering', allocated: Number(totalBudget) * 0.5, spent: 0 },
+        {
+          name: 'Logistics & Venue',
+          allocated: Number(totalBudget) * 0.5,
+          spent: 0,
+        },
+        {
+          name: 'Marketing & Catering',
+          allocated: Number(totalBudget) * 0.5,
+          spent: 0,
+        },
       ],
     };
 

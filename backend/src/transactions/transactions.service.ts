@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateTransactionDto, TransactionType } from './dto/create-transaction.dto';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
 
 export interface DefaultTransactionData {
   id: string;
@@ -110,8 +110,11 @@ export class TransactionsService {
             type: tx.type as any,
             title: tx.title,
             event: tx.event ? tx.event.name : 'Society General',
-            submitter: tx.submittedBy ? `${tx.submittedBy.name} (${tx.submittedBy.memberId || 'N/A'})` : 'Executive Member',
-            category: tx.type === 'INCOME' ? 'Income Deposit' : 'Expense Disbursement',
+            submitter: tx.submittedBy
+              ? `${tx.submittedBy.name} (${tx.submittedBy.memberId || 'N/A'})`
+              : 'Executive Member',
+            category:
+              tx.type === 'INCOME' ? 'Income Deposit' : 'Expense Disbursement',
             amount: Number(tx.amount),
             date: tx.createdAt.toISOString().split('T')[0],
             status: tx.status as any,
@@ -121,12 +124,16 @@ export class TransactionsService {
         }
       }
     } catch (error: any) {
-      this.logger.warn(`Database transaction list query failed: ${error.message}`);
+      this.logger.warn(
+        `Database transaction list query failed: ${error.message}`,
+      );
     }
 
     return this.localStore.filter((tx) => {
-      const matchStatus = !statusFilter || statusFilter === 'ALL' || tx.status === statusFilter;
-      const matchType = !typeFilter || typeFilter === 'ALL' || tx.type === typeFilter;
+      const matchStatus =
+        !statusFilter || statusFilter === 'ALL' || tx.status === statusFilter;
+      const matchType =
+        !typeFilter || typeFilter === 'ALL' || tx.type === typeFilter;
       return matchStatus && matchType;
     });
   }
@@ -145,8 +152,11 @@ export class TransactionsService {
             type: tx.type as any,
             title: tx.title,
             event: tx.event ? tx.event.name : 'Society General',
-            submitter: tx.submittedBy ? `${tx.submittedBy.name} (${tx.submittedBy.memberId || 'N/A'})` : 'Executive Member',
-            category: tx.type === 'INCOME' ? 'Income Deposit' : 'Expense Disbursement',
+            submitter: tx.submittedBy
+              ? `${tx.submittedBy.name} (${tx.submittedBy.memberId || 'N/A'})`
+              : 'Executive Member',
+            category:
+              tx.type === 'INCOME' ? 'Income Deposit' : 'Expense Disbursement',
             amount: Number(tx.amount),
             date: tx.createdAt.toISOString().split('T')[0],
             status: tx.status as any,
@@ -156,7 +166,9 @@ export class TransactionsService {
         }
       }
     } catch (error: any) {
-      this.logger.warn(`Database transaction findOne query failed: ${error.message}`);
+      this.logger.warn(
+        `Database transaction findOne query failed: ${error.message}`,
+      );
     }
 
     const found = this.localStore.find((tx) => tx.id === id);
@@ -167,7 +179,15 @@ export class TransactionsService {
   }
 
   async create(userId: string, dto: CreateTransactionDto) {
-    const { title, type, amount, eventId, budgetItemId, receiptUrl, overrideJustification } = dto;
+    const {
+      title,
+      type,
+      amount,
+      eventId,
+      budgetItemId,
+      receiptUrl,
+      overrideJustification,
+    } = dto;
 
     try {
       if (this.prisma.isDbAvailable()) {
@@ -195,8 +215,11 @@ export class TransactionsService {
           type: created.type as any,
           title: created.title,
           event: created.event ? created.event.name : 'Society Event',
-          submitter: created.submittedBy ? `${created.submittedBy.name} (${created.submittedBy.memberId})` : 'Society Member',
-          category: type === 'INCOME' ? 'Income Deposit' : 'Expense Disbursement',
+          submitter: created.submittedBy
+            ? `${created.submittedBy.name} (${created.submittedBy.memberId})`
+            : 'Society Member',
+          category:
+            type === 'INCOME' ? 'Income Deposit' : 'Expense Disbursement',
           amount: Number(created.amount),
           date: created.createdAt.toISOString().split('T')[0],
           status: 'PENDING' as const,
@@ -235,7 +258,11 @@ export class TransactionsService {
             approvedById: approverId || undefined,
           },
         });
-        return { message: 'Transaction approved', id: updated.id, status: updated.status };
+        return {
+          message: 'Transaction approved',
+          id: updated.id,
+          status: updated.status,
+        };
       }
     } catch (error: any) {
       this.logger.warn(`Database approval update failed: ${error.message}`);
@@ -258,7 +285,11 @@ export class TransactionsService {
             rejectionReason,
           },
         });
-        return { message: 'Transaction rejected', id: updated.id, status: updated.status };
+        return {
+          message: 'Transaction rejected',
+          id: updated.id,
+          status: updated.status,
+        };
       }
     } catch (error: any) {
       this.logger.warn(`Database rejection update failed: ${error.message}`);
@@ -282,7 +313,11 @@ export class TransactionsService {
             overrideJustification: instructions,
           },
         });
-        return { message: 'Revision requested', id: updated.id, status: updated.status };
+        return {
+          message: 'Revision requested',
+          id: updated.id,
+          status: updated.status,
+        };
       }
     } catch (error: any) {
       this.logger.warn(`Database revision update failed: ${error.message}`);

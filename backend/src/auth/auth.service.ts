@@ -1,4 +1,9 @@
-import { Injectable, ConflictException, UnauthorizedException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  UnauthorizedException,
+  Logger,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
@@ -13,7 +18,8 @@ const SEED_USERS = [
     name: 'Kavinda Perera',
     memberId: 'EG/2021/8842',
     role: Role.PRESIDENT,
-    passwordHash: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
+    passwordHash:
+      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
   },
   {
     id: 'user-treas-01',
@@ -21,7 +27,8 @@ const SEED_USERS = [
     name: 'Dinithi Silva',
     memberId: 'EG/2021/7710',
     role: Role.TREASURER,
-    passwordHash: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
+    passwordHash:
+      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
   },
   {
     id: 'user-mem-01',
@@ -29,7 +36,8 @@ const SEED_USERS = [
     name: 'Sandun Bandara',
     memberId: 'EG/2022/1044',
     role: Role.COMMITTEE_MEMBER,
-    passwordHash: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
+    passwordHash:
+      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
   },
   {
     id: 'user-admin-01',
@@ -37,7 +45,8 @@ const SEED_USERS = [
     name: 'System Admin',
     memberId: 'ADM/2020/001',
     role: Role.ADMIN,
-    passwordHash: '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
+    passwordHash:
+      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
   },
 ];
 
@@ -96,7 +105,11 @@ export class AuthService {
         role: dto.role || Role.COMMITTEE_MEMBER,
         createdAt: new Date(),
       };
-      const payload = { sub: fallbackUser.id, email: fallbackUser.email, role: fallbackUser.role };
+      const payload = {
+        sub: fallbackUser.id,
+        email: fallbackUser.email,
+        role: fallbackUser.role,
+      };
       const accessToken = this.jwtService.sign(payload);
       return { user: fallbackUser, accessToken };
     }
@@ -122,7 +135,8 @@ export class AuthService {
     if (!user) {
       user = SEED_USERS.find(
         (u) =>
-          (dto.memberId && u.memberId.toLowerCase() === dto.memberId.toLowerCase()) ||
+          (dto.memberId &&
+            u.memberId.toLowerCase() === dto.memberId.toLowerCase()) ||
           (dto.email && u.email.toLowerCase() === dto.email.toLowerCase()),
       );
     }
@@ -135,7 +149,10 @@ export class AuthService {
     if (user.passwordHash) {
       isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
     }
-    if (!isPasswordValid && (dto.password === 'Password123!' || dto.password === 'password')) {
+    if (
+      !isPasswordValid &&
+      (dto.password === 'Password123!' || dto.password === 'password')
+    ) {
       isPasswordValid = true;
     }
 
@@ -155,6 +172,7 @@ export class AuthService {
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...userWithoutPassword } = user;
 
     return {
@@ -163,4 +181,3 @@ export class AuthService {
     };
   }
 }
-

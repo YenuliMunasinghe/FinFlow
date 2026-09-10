@@ -52,13 +52,23 @@ export class ReportsService {
           categoryBreakdown: [
             { category: 'Logistics & Venue', allocated: 400000, spent: 278500 },
             { category: 'Audio/Visual Hire', allocated: 200000, spent: 142000 },
-            { category: 'Food & Refreshments', allocated: 250000, spent: 185500 },
-            { category: 'Printing & Stationery', allocated: 100000, spent: 48000 },
+            {
+              category: 'Food & Refreshments',
+              allocated: 250000,
+              spent: 185500,
+            },
+            {
+              category: 'Printing & Stationery',
+              allocated: 100000,
+              spent: 48000,
+            },
           ],
         };
       }
     } catch (error: any) {
-      this.logger.warn(`Failed to fetch database financial report: ${error.message}`);
+      this.logger.warn(
+        `Failed to fetch database financial report: ${error.message}`,
+      );
     }
 
     // Default memory fallback
