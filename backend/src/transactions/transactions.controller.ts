@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Body,
   Param,
   Query,
@@ -16,6 +17,8 @@ import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { CloudinaryService } from '../upload/cloudinary.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles, Role } from '../auth/roles.decorator';
 
 @Controller('transactions')
 @UseGuards(JwtAuthGuard)
@@ -52,5 +55,27 @@ export class TransactionsController {
       file.originalname || 'receipt.png',
     );
     return { receiptUrl };
+  }
+
+  @Patch(':id/approve')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PRESIDENT, Role.ADMIN)
+  async approve(@Param('id') id: string, @Request() req: any) {
+    const approverId = req.user?.userId;
+    return this.transactionsService.approveTransaction(id, approverId);
+  }
+
+  @Patch(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PRESIDENT, Role.ADMIN)
+  async reject(@Param('id') id: string, @Body('reason') reason?: string) {
+    return this.transactionsService.rejectTransaction(id, reason);
+  }
+
+  @Patch(':id/revision')
+  @UseGuards(RolesGuard)
+  @Roles(Role.PRESIDENT, Role.ADMIN)
+  async requestRevision(@Param('id') id: string, @Body('instructions') instructions?: string) {
+    return this.transactionsService.requestRevision(id, instructions);
   }
 }
