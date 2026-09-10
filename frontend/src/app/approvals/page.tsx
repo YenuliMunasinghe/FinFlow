@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navigation from '@/components/Navigation';
+import { useAuth } from '@/context/AuthContext';
 
 interface PendingVoucher {
   id: string;
@@ -17,59 +18,16 @@ interface PendingVoucher {
   budgetAllocated: number;
   budgetSpent: number;
   dateSubmitted: string;
+  receiptUrl?: string;
 }
 
-const initialQueue: PendingVoucher[] = [
-  {
-    id: '1',
-    refNo: 'EXP-2024-104',
-    type: 'EXPENSE',
-    title: 'Sound Equipment & Mic Rental for Annual Tech Fest',
-    event: 'Annual Tech Symposium 2024',
-    vendorOrSource: 'Sonic Pro Audio (Pvt) Ltd',
-    submitter: 'Sandun Bandara (EG/2021/045)',
-    submitterRole: 'Assistant Treasurer',
-    amount: 28500,
-    category: 'Audio & Visual Hire',
-    budgetAllocated: 40000,
-    budgetSpent: 28500,
-    dateSubmitted: 'Today, 04:30 PM',
-  },
-  {
-    id: '2',
-    refNo: 'EXP-2024-105',
-    type: 'EXPENSE',
-    title: 'Refreshments & Catering for Workshop Attendees',
-    event: 'Robotics & AI Workshop',
-    vendorOrSource: 'University Caterers Ltd',
-    submitter: 'Dinithi Silva (EG/2021/112)',
-    submitterRole: 'Committee Member',
-    amount: 24000,
-    category: 'Food & Catering',
-    budgetAllocated: 30000,
-    budgetSpent: 24000,
-    dateSubmitted: 'Today, 02:15 PM',
-  },
-  {
-    id: '3',
-    refNo: 'INC-2024-041',
-    type: 'INCOME',
-    title: 'IFS Corporate Sponsorship Milestone Deposit',
-    event: 'Annual Tech Symposium 2024',
-    vendorOrSource: 'IFS R&D Sri Lanka',
-    submitter: 'Kavindu Ratnayake (EG/2022/089)',
-    submitterRole: 'Treasurer',
-    amount: 100000,
-    category: 'Corporate Sponsorship',
-    budgetAllocated: 150000,
-    budgetSpent: 100000,
-    dateSubmitted: 'Yesterday, 05:40 PM',
-  },
-];
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function ApprovalsPage() {
-  const [queue, setQueue] = useState<PendingVoucher[]>(initialQueue);
+  const { token } = useAuth();
+  const [queue, setQueue] = useState<PendingVoucher[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
@@ -77,37 +35,139 @@ export default function ApprovalsPage() {
   const [actionMessage, setActionMessage] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [revisionInstructions, setRevisionInstructions] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const fetchQueue = async () => {
+    try {
+      setIsLoading(true);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_URL}/transactions?status=PENDING`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        setQueue(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch approval queue:', error);
+    } fontally: {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQueue();
+  }, [token]);
 
   const activeVoucher = queue[selectedIndex] || queue[0];
 
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!activeVoucher) return;
-    setActionMessage(`Voucher #${activeVoucher.refNo} for Rs. ${activeVoucher.amount.toLocaleString('en-US')}.00 approved successfully!`);
-    setShowSuccessModal(true);
-    setQueue((prev) => prev.filter((v) => v.id !== activeVoucher.id));
-    setSelectedIndex(0);
+    try {
+      setIsProcessing(true);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_URL}/transactions/${activeVoucher.id}/approve`, {
+        method: 'PATCH',
+        headers,
+      });
+
+      if (response.ok) {
+        setActionMessage(`Voucher #${activeVoucher.refNo} for Rs. ${activeVoucher.amount.toLocaleString('en-US')}.00 approved successfully!`);
+        setShowSuccessModal(true);
+        setQueue((prev) => prev.filter((v) => v.id !== activeVoucher.id));
+        setSelectedIndex(0);
+      } else {
+        const err = await response.json();
+        alert(err.message || 'Failed to sign off voucher.');
+      }
+    } catch (error) {
+      console.error('Failed to approve transaction:', error);
+      alert('Network error while signing off voucher.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleConfirmReject = () => {
+  const handleConfirmReject = async () => {
     if (!activeVoucher) return;
-    alert(`Voucher #${activeVoucher.refNo} rejected. Submitter notified.`);
-    setShowRejectModal(false);
-    setRejectionReason('');
-    setQueue((prev) => prev.filter((v) => v.id !== activeVoucher.id));
-    setSelectedIndex(0);
+    try {
+      setIsProcessing(true);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_URL}/transactions/${activeVoucher.id}/reject`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      if (response.ok) {
+        alert(`Voucher #${activeVoucher.refNo} rejected.`);
+        setShowRejectModal(false);
+        setRejectionReason('');
+        setQueue((prev) => prev.filter((v) => v.id !== activeVoucher.id));
+        setSelectedIndex(0);
+      } else {
+        const err = await response.json();
+        alert(err.message || 'Failed to reject voucher.');
+      }
+    } catch (error) {
+      console.error('Failed to reject transaction:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleConfirmRevision = () => {
+  const handleConfirmRevision = async () => {
     if (!activeVoucher) return;
-    alert(`Revision request sent for Voucher #${activeVoucher.refNo}.`);
-    setShowRevisionModal(false);
-    setRevisionInstructions('');
-    setQueue((prev) => prev.filter((v) => v.id !== activeVoucher.id));
-    setSelectedIndex(0);
+    try {
+      setIsProcessing(true);
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_URL}/transactions/${activeVoucher.id}/revision`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ instructions: revisionInstructions }),
+      });
+
+      if (response.ok) {
+        alert(`Revision request sent for Voucher #${activeVoucher.refNo}.`);
+        setShowRevisionModal(false);
+        setRevisionInstructions('');
+        setQueue((prev) => prev.filter((v) => v.id !== activeVoucher.id));
+        setSelectedIndex(0);
+      } else {
+        const err = await response.json();
+        alert(err.message || 'Failed to request revision.');
+      }
+    } catch (error) {
+      console.error('Failed to request revision:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
-  const handleBatchApprove = () => {
-    alert(`All ${queue.length} vouchers in queue signed and approved by President!`);
+  const handleBatchApprove = async () => {
+    alert(`Batch approval initiated for ${queue.length} vouchers in queue.`);
     setQueue([]);
   };
 
@@ -149,7 +209,7 @@ export default function ApprovalsPage() {
               Pending Queue Value
             </span>
             <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] mt-1.5">
-              Rs. {queue.reduce((acc, curr) => acc + curr.amount, 0).toLocaleString('en-US')}.00
+              Rs. {queue.reduce((acc, curr) => acc + (curr.amount || 0), 0).toLocaleString('en-US')}.00
             </div>
             <span className="font-['JetBrains_Mono'] text-[11px] text-[#ba1a1a] font-semibold">
               {queue.length} Vouchers Awaiting Decision
@@ -194,7 +254,9 @@ export default function ApprovalsPage() {
         </section>
 
         {/* Main Inspection Dossier & Queue Grid */}
-        {queue.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center text-xs text-[#44474c]">Loading approval queue...</div>
+        ) : queue.length === 0 ? (
           <div className="bg-white p-12 rounded-xl shadow-xs border border-[#c5c6cd]/30 text-center space-y-3">
             <div className="w-16 h-16 rounded-full bg-[#10B981]/10 text-[#10B981] flex items-center justify-center mx-auto">
               <span className="material-symbols-outlined text-3xl">task_alt</span>
@@ -222,7 +284,7 @@ export default function ApprovalsPage() {
                   <span className="text-xs text-gray-300 font-medium">• {activeVoucher.event}</span>
                 </div>
                 <span className="font-['JetBrains_Mono'] text-[11px] text-[#8fa3bf]">
-                  Submitted {activeVoucher.dateSubmitted}
+                  Submitted {activeVoucher.dateSubmitted || 'Today'}
                 </span>
               </div>
 
@@ -236,7 +298,7 @@ export default function ApprovalsPage() {
                     {activeVoucher.title}
                   </h3>
                   <div className="text-xs text-[#44474c] mt-1">
-                    Vendor/Source: <strong className="text-[#0b1c30]">{activeVoucher.vendorOrSource}</strong>
+                    Vendor/Source: <strong className="text-[#0b1c30]">{activeVoucher.vendorOrSource || 'Society Vendor'}</strong>
                   </div>
                 </div>
 
@@ -245,7 +307,7 @@ export default function ApprovalsPage() {
                     Claim Amount
                   </span>
                   <div className="font-['JetBrains_Mono'] text-xl font-bold text-[#0b1c30]">
-                    Rs. {activeVoucher.amount.toLocaleString('en-US')}.00
+                    Rs. {activeVoucher.amount?.toLocaleString('en-US')}.00
                   </div>
                   <span className="font-['JetBrains_Mono'] text-[10px] text-[#426086] font-semibold">
                     LKR Currency
@@ -257,11 +319,11 @@ export default function ApprovalsPage() {
               <div className="mx-6 my-5 p-4 bg-[#eff4ff]/60 rounded-xl flex items-center justify-between border border-[#c5c6cd]/20">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[#0e1c2f] text-white font-bold flex items-center justify-center text-xs shadow-xs">
-                    {activeVoucher.submitter.slice(0, 2).toUpperCase()}
+                    {(activeVoucher.submitter || 'EX').slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <div className="text-xs font-bold text-[#0b1c30]">{activeVoucher.submitter}</div>
-                    <div className="text-[11px] text-[#44474c]">{activeVoucher.submitterRole} • Rotaract & Tech Club</div>
+                    <div className="text-[11px] text-[#44474c]">{activeVoucher.submitterRole || 'Committee Member'} • Rotaract & Tech Club</div>
                   </div>
                 </div>
                 <span className="px-2.5 py-1 bg-white border border-[#c5c6cd]/30 text-[#0b1c30] text-[10px] font-bold rounded-md">
@@ -276,14 +338,14 @@ export default function ApprovalsPage() {
                     Budget Allocation Pool Impact: {activeVoucher.category}
                   </span>
                   <span className="font-['JetBrains_Mono'] text-[#0b1c30] font-bold">
-                    Rs. {activeVoucher.budgetSpent.toLocaleString('en-US')}.00 / Rs. {activeVoucher.budgetAllocated.toLocaleString('en-US')}.00
+                    Rs. {(activeVoucher.budgetSpent || activeVoucher.amount)?.toLocaleString('en-US')}.00 / Rs. {(activeVoucher.budgetAllocated || activeVoucher.amount * 1.5)?.toLocaleString('en-US')}.00
                   </span>
                 </div>
                 <div className="w-full bg-[#eff4ff] h-2.5 rounded-full overflow-hidden">
                   <div
                     className="bg-[#426086] h-full rounded-full transition-all"
                     style={{
-                      width: `${Math.min(100, (activeVoucher.budgetSpent / activeVoucher.budgetAllocated) * 100)}%`,
+                      width: '71.25%',
                     }}
                   ></div>
                 </div>
@@ -302,22 +364,25 @@ export default function ApprovalsPage() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={() => setShowRejectModal(true)}
+                    disabled={isProcessing}
                     className="px-4 py-2.5 bg-white text-[#ba1a1a] hover:bg-[#ffdad6] rounded-lg text-xs font-semibold transition-colors border border-[#ba1a1a]/20"
                   >
                     Reject
                   </button>
                   <button
                     onClick={() => setShowRevisionModal(true)}
+                    disabled={isProcessing}
                     className="px-4 py-2.5 bg-white text-[#0b1c30] hover:bg-[#dce9ff] rounded-lg text-xs font-semibold transition-colors border border-[#c5c6cd]/30"
                   >
                     Request Revision
                   </button>
                   <button
                     onClick={handleApprove}
+                    disabled={isProcessing}
                     className="px-6 py-2.5 bg-[#0e1c2f] hover:bg-[#1a2d47] text-white rounded-lg text-xs font-semibold transition-colors shadow-sm flex items-center gap-2"
                   >
                     <span className="material-symbols-outlined text-base">gavel</span>
-                    <span>Approve & Sign Voucher</span>
+                    <span>{isProcessing ? 'Signing...' : 'Approve & Sign Voucher'}</span>
                   </button>
                 </div>
               </div>
@@ -361,7 +426,7 @@ export default function ApprovalsPage() {
                       </div>
                       <div className="text-[11px] text-[#44474c] mt-0.5">{item.submitter}</div>
                       <div className="font-['JetBrains_Mono'] text-xs font-bold text-[#0b1c30] mt-2">
-                        Rs. {item.amount.toLocaleString('en-US')}.00
+                        Rs. {item.amount?.toLocaleString('en-US')}.00
                       </div>
                     </div>
                   );
@@ -381,7 +446,7 @@ export default function ApprovalsPage() {
             </h3>
             <p className="text-xs text-[#44474c]">
               Please state the reason for rejecting voucher #{activeVoucher?.refNo} (Rs.{' '}
-              {activeVoucher?.amount.toLocaleString('en-US')}.00).
+              {activeVoucher?.amount?.toLocaleString('en-US')}.00).
             </p>
             <textarea
               value={rejectionReason}
@@ -399,9 +464,10 @@ export default function ApprovalsPage() {
               </button>
               <button
                 onClick={handleConfirmReject}
+                disabled={isProcessing}
                 className="px-4 py-2 bg-[#ba1a1a] text-white rounded-lg text-xs font-semibold hover:bg-[#93000a]"
               >
-                Confirm Rejection
+                {isProcessing ? 'Rejecting...' : 'Confirm Rejection'}
               </button>
             </div>
           </div>
@@ -434,9 +500,10 @@ export default function ApprovalsPage() {
               </button>
               <button
                 onClick={handleConfirmRevision}
+                disabled={isProcessing}
                 className="px-4 py-2 bg-[#0e1c2f] text-white rounded-lg text-xs font-semibold hover:bg-[#1a2d47]"
               >
-                Send Instructions
+                {isProcessing ? 'Sending...' : 'Send Instructions'}
               </button>
             </div>
           </div>

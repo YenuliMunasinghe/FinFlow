@@ -8,51 +8,69 @@ export interface DefaultTransactionData {
   type: 'INCOME' | 'EXPENSE';
   title: string;
   event: string;
+  vendorOrSource?: string;
   submitter: string;
+  submitterRole?: string;
   category: string;
   amount: number;
   date: string;
-  status: 'APPROVED' | 'PENDING' | 'REJECTED';
+  status: 'APPROVED' | 'PENDING' | 'REJECTED' | 'REVISION_REQUESTED';
   receiptUrl?: string;
   isOverBudget?: boolean;
+  budgetAllocated?: number;
+  budgetSpent?: number;
+  rejectionReason?: string;
+  revisionInstructions?: string;
 }
 
 const mockTransactionsData: DefaultTransactionData[] = [
   {
-    id: 'trx-1',
-    refNo: 'TRX-2024-089',
-    type: 'INCOME',
-    title: 'Dialog Axiata Sponsorship Deposit',
-    event: 'Annual Tech Symposium 2024',
-    submitter: 'Kavinda Perera (EG/2021/8842)',
-    category: 'Corporate Sponsorship',
-    amount: 150000,
-    date: 'Today, 10:24 AM',
-    status: 'APPROVED',
-  },
-  {
-    id: 'trx-2',
-    refNo: 'TRX-2024-088',
+    id: 'trx-104',
+    refNo: 'EXP-2024-104',
     type: 'EXPENSE',
-    title: 'Stage Sound & Lights Rental',
+    title: 'Sound Equipment & Mic Rental for Annual Tech Fest',
     event: 'Annual Tech Symposium 2024',
+    vendorOrSource: 'Sonic Pro Audio (Pvt) Ltd',
     submitter: 'Sandun Bandara (EG/2021/045)',
-    category: 'Logistics',
+    submitterRole: 'Assistant Treasurer',
+    category: 'Audio & Visual Hire',
     amount: 28500,
-    date: 'Yesterday, 04:12 PM',
+    budgetAllocated: 40000,
+    budgetSpent: 28500,
+    date: 'Today, 04:30 PM',
     status: 'PENDING',
   },
   {
-    id: 'trx-3',
-    refNo: 'TRX-2024-087',
+    id: 'trx-105',
+    refNo: 'EXP-2024-105',
     type: 'EXPENSE',
-    title: 'Workshop Certificates & Banner Printing',
-    event: 'Robotics Workshop',
+    title: 'Refreshments & Catering for Workshop Attendees',
+    event: 'Robotics & AI Workshop',
+    vendorOrSource: 'University Caterers Ltd',
     submitter: 'Dinithi Silva (EG/2021/112)',
-    category: 'Printing & Stationery',
-    amount: 14000,
-    date: 'Jun 16, 02:00 PM',
-    status: 'APPROVED',
+    submitterRole: 'Committee Member',
+    category: 'Food & Catering',
+    amount: 24000,
+    budgetAllocated: 30000,
+    budgetSpent: 24000,
+    date: 'Today, 02:15 PM',
+    status: 'PENDING',
+  },
+  {
+    id: 'trx-041',
+    refNo: 'INC-2024-041',
+    type: 'INCOME',
+    title: 'IFS Corporate Sponsorship Milestone Deposit',
+    event: 'Annual Tech Symposium 2024',
+    vendorOrSource: 'IFS R&D Sri Lanka',
+    submitter: 'Kavindu Ratnayake (EG/2022/089)',
+    submitterRole: 'Treasurer',
+    category: 'Corporate Sponsorship',
+    amount: 100000,
+    budgetAllocated: 150000,
+    budgetSpent: 100000,
+    date: 'Yesterday, 05:40 PM',
+    status: 'PENDING',
   },
 ];
 
@@ -205,5 +223,76 @@ export class TransactionsService {
 
     this.localStore.unshift(newTx);
     return newTx;
+  }
+
+  async approveTransaction(id: string, approverId?: string) {
+    try {
+      if (this.prisma.isDbAvailable()) {
+        const updated = await this.prisma.transaction.update({
+          where: { id },
+          data: {
+            status: 'APPROVED',
+            approvedById: approverId || undefined,
+          },
+        });
+        return { message: 'Transaction approved', id: updated.id, status: updated.status };
+      }
+    } catch (error: any) {
+      this.logger.warn(`Database approval update failed: ${error.message}`);
+    }
+
+    const item = this.localStore.find((t) => t.id === id);
+    if (item) {
+      item.status = 'APPROVED';
+    }
+    return { message: 'Transaction approved', id, status: 'APPROVED' };
+  }
+
+  async rejectTransaction(id: string, rejectionReason?: string) {
+    try {
+      if (this.prisma.isDbAvailable()) {
+        const updated = await this.prisma.transaction.update({
+          where: { id },
+          data: {
+            status: 'REJECTED',
+            rejectionReason,
+          },
+        });
+        return { message: 'Transaction rejected', id: updated.id, status: updated.status };
+      }
+    } catch (error: any) {
+      this.logger.warn(`Database rejection update failed: ${error.message}`);
+    }
+
+    const item = this.localStore.find((t) => t.id === id);
+    if (item) {
+      item.status = 'REJECTED';
+      item.rejectionReason = rejectionReason;
+    }
+    return { message: 'Transaction rejected', id, status: 'REJECTED' };
+  }
+
+  async requestRevision(id: string, instructions?: string) {
+    try {
+      if (this.prisma.isDbAvailable()) {
+        const updated = await this.prisma.transaction.update({
+          where: { id },
+          data: {
+            status: 'REVISION_REQUESTED',
+            overrideJustification: instructions,
+          },
+        });
+        return { message: 'Revision requested', id: updated.id, status: updated.status };
+      }
+    } catch (error: any) {
+      this.logger.warn(`Database revision update failed: ${error.message}`);
+    }
+
+    const item = this.localStore.find((t) => t.id === id);
+    if (item) {
+      item.status = 'REVISION_REQUESTED';
+      item.revisionInstructions = instructions;
+    }
+    return { message: 'Revision requested', id, status: 'REVISION_REQUESTED' };
   }
 }
