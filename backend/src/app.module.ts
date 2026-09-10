@@ -6,9 +6,17 @@ import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { ReportsModule } from './reports/reports.module';
+import { AuditModule } from './audit/audit.module';
 
 @Module({
-  imports: [PrismaModule, AuthModule, EventsModule, TransactionsModule, ReportsModule],
+  imports: [
+    PrismaModule,
+    AuthModule,
+    EventsModule,
+    TransactionsModule,
+    ReportsModule,
+    AuditModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
