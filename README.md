@@ -72,16 +72,10 @@ FinFlow/
 
 ---
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/YenuliMunasinghe/FinFlow.git
-cd FinFlow
-```
 
 ---
 
-### 2. Backend Setup
+### 1. Backend Setup
 
 ```bash
 # Navigate to backend directory
@@ -98,7 +92,7 @@ The backend REST API will be accessible at: `http://localhost:5000/api`
 
 ---
 
-### 3. Frontend Setup
+### 2. Frontend Setup
 
 ```bash
 # In a new terminal window, navigate to frontend directory
