@@ -25,6 +25,8 @@ export default function Navigation({ children, pageTitle }: NavigationProps) {
     { label: 'Approvals', href: '/approvals', icon: 'verified_user', badge: '3' },
     { label: 'Transactions', href: '/transactions', icon: 'receipt_long' },
     { label: 'Events & Budgets', href: '/events', icon: 'event' },
+    { label: 'Reports', href: '/reports', icon: 'analytics' },
+    { label: 'Audit Logs', href: '/audit-logs', icon: 'history' },
   ];
 
   const userDisplayName = user?.name || 'Kavinda Perera';
