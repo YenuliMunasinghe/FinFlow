@@ -69,20 +69,13 @@ FinFlow/
 
 - **Node.js**: `v20.x` or higher
 - **npm**: `v10.x` or higher
-- **Microsoft SQL Server**: Local instance or Docker container
 
 ---
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/YenuliMunasinghe/FinFlow.git
-cd FinFlow
-```
 
 ---
 
-### 2. Backend Setup
+### 1. Backend Setup
 
 ```bash
 # Navigate to backend directory
@@ -99,7 +92,7 @@ The backend REST API will be accessible at: `http://localhost:5000/api`
 
 ---
 
-### 3. Frontend Setup
+### 2. Frontend Setup
 
 ```bash
 # In a new terminal window, navigate to frontend directory
@@ -130,4 +123,4 @@ The frontend web application will be accessible at: `http://localhost:3500` (or 
 All feature work follows the feature-branching standard:
 - `development` : Main integration branch
 - `feature/<phase-or-feature-name>` : Isolated feature development
-- `fix/<issue-name>` : Bug fixes
+
