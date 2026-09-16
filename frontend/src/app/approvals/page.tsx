@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import Navigation from '@/components/Navigation';
 import { SimpleTransaction } from '@/components/Modals/TransactionDetailModal';
-import { Check, XCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Check, XCircle, CheckCircle2, Clock, ShieldAlert } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
+import { useAuth, Role } from '@/context/AuthContext';
 
 const INITIAL_PENDING: SimpleTransaction[] = [
   {
@@ -49,20 +50,35 @@ const INITIAL_PENDING: SimpleTransaction[] = [
 ];
 
 export default function ApprovalsPage() {
-  const { success, error } = useToast();
+  const { user } = useAuth();
+  const { success, error, info } = useToast();
   const [pendingList, setPendingList] = useState<SimpleTransaction[]>(INITIAL_PENDING);
 
+  const isPresident = user?.role === Role.PRESIDENT;
+
   const handleApprove = (id: string, title: string) => {
+    if (!isPresident) {
+      error('Access Denied', 'Only the Society President is authorized to approve transactions.');
+      return;
+    }
     setPendingList((prev) => prev.filter((item) => item.id !== id));
     success('Approved', `"${title}" has been approved.`);
   };
 
   const handleReject = (id: string, title: string) => {
+    if (!isPresident) {
+      error('Access Denied', 'Only the Society President is authorized to reject transactions.');
+      return;
+    }
     setPendingList((prev) => prev.filter((item) => item.id !== id));
     error('Rejected', `"${title}" has been rejected.`);
   };
 
   const handleApproveAll = () => {
+    if (!isPresident) {
+      error('Access Denied', 'Only the Society President is authorized to approve transactions.');
+      return;
+    }
     const count = pendingList.length;
     setPendingList([]);
     success('All Approved', `Approved ${count} pending transactions.`);
@@ -73,6 +89,16 @@ export default function ApprovalsPage() {
   return (
     <Navigation pageTitle="Approvals">
       <div className="space-y-6">
+        {/* Permission Banner if not President */}
+        {!isPresident && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-xs text-amber-900 shadow-xs">
+            <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <strong className="font-bold">President Authorization Required:</strong> Only the Society President is authorized to approve or reject financial requests. You are signed in as <strong className="capitalize">{user?.role?.toLowerCase().replace('_', ' ') || 'Member'}</strong> (View Only).
+            </div>
+          </div>
+        )}
+
         {/* Header Ribbon */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div>
@@ -82,7 +108,7 @@ export default function ApprovalsPage() {
             </p>
           </div>
 
-          {pendingList.length > 0 && (
+          {isPresident && pendingList.length > 0 && (
             <button
               onClick={handleApproveAll}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
@@ -145,7 +171,7 @@ export default function ApprovalsPage() {
                     <th className="py-3 px-4">Submitted By</th>
                     <th className="py-3 px-4">Date</th>
                     <th className="py-3 px-4 text-right">Amount (LKR)</th>
-                    <th className="py-3 px-4 text-center">Quick Decision</th>
+                    <th className="py-3 px-4 text-center">Status / Decision</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -171,22 +197,28 @@ export default function ApprovalsPage() {
                         Rs. {item.amount.toLocaleString('en-US')}.00
                       </td>
                       <td className="py-4 px-4 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleReject(item.id, item.title)}
-                            className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                          <button
-                            onClick={() => handleApprove(item.id, item.title)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors flex items-center gap-1"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>Approve</span>
-                          </button>
-                        </div>
+                        {isPresident ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleReject(item.id, item.title)}
+                              className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-semibold text-xs rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Reject</span>
+                            </button>
+                            <button
+                              onClick={() => handleApprove(item.id, item.title)}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg shadow-xs transition-colors flex items-center gap-1"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>Approve</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold text-[10px]">
+                            Awaiting President
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}

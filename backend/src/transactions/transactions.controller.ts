@@ -62,7 +62,7 @@ export class TransactionsController {
 
   @Patch(':id/approve')
   @UseGuards(RolesGuard)
-  @Roles(Role.PRESIDENT, Role.ADMIN)
+  @Roles(Role.PRESIDENT)
   async approve(@Param('id') id: string, @Request() req: any) {
     const approverId = req.user?.userId;
     return this.transactionsService.approveTransaction(id, approverId);
@@ -70,14 +70,14 @@ export class TransactionsController {
 
   @Patch(':id/reject')
   @UseGuards(RolesGuard)
-  @Roles(Role.PRESIDENT, Role.ADMIN)
+  @Roles(Role.PRESIDENT)
   async reject(@Param('id') id: string, @Body('reason') reason?: string) {
     return this.transactionsService.rejectTransaction(id, reason);
   }
 
   @Patch(':id/revision')
   @UseGuards(RolesGuard)
-  @Roles(Role.PRESIDENT, Role.ADMIN)
+  @Roles(Role.PRESIDENT)
   async requestRevision(
     @Param('id') id: string,
     @Body('instructions') instructions?: string,
