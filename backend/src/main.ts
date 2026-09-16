@@ -1,55 +1,63 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, INestApplication } from '@nestjs/common';
+import { ExpressAdapter } from '@nestjs/platform-express';
+import express, { Express } from 'express';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+export const server: Express = express();
+let cachedApp: INestApplication;
 
-  // Enable CORS for frontend communication (supports localhost, LAN IPs e.g. 10.10.13.62, and FRONTEND_URL)
-  app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, Postman)
-      if (!origin) return callback(null, true);
+export async function createApp(expressInstance: Express): Promise<INestApplication> {
+  if (!cachedApp) {
+    const app = await NestFactory.create(
+      AppModule,
+      new ExpressAdapter(expressInstance),
+    );
 
-      // Match localhost, 127.0.0.1, and private IPv4 ranges (10.x.x.x, 192.168.x.x, 172.16-31.x.x) on any port
-      const isLocalOrLan = /^http:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(
-        origin,
-      );
+    // Enable CORS for all domains (Vercel, LAN, and Localhost)
+    app.enableCors({
+      origin: (origin, callback) => {
+        // Allow all origins for API access
+        callback(null, true);
+      },
+      credentials: true,
+    });
 
-      if (
-        isLocalOrLan ||
-        origin === process.env.FRONTEND_URL ||
-        origin === 'http://localhost:3500' ||
-        origin === 'http://localhost:3000' ||
-        origin === 'http://10.10.13.62:3500' ||
-        origin === 'http://10.10.13.62:3000'
-      ) {
-        return callback(null, true);
-      }
+    // Global prefix for all REST endpoints: /api/...
+    app.setGlobalPrefix('api');
 
-      return callback(null, true);
-    },
-    credentials: true,
-  });
+    // Automatically validate and transform request payloads (DTOs)
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
 
-  // Global prefix for all REST endpoints: /api/...
-  app.setGlobalPrefix('api');
-
-  // Automatically validate and transform request payloads (DTOs)
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  const port = process.env.PORT || 5000;
-  // Bind to 0.0.0.0 so external devices on LAN (10.10.13.62) and containers can connect
-  await app.listen(port, '0.0.0.0');
-  console.log(`🚀 FinFlow Backend is running on:`);
-  console.log(`   - Local:   http://localhost:${port}/api`);
-  console.log(`   - Network: http://10.10.13.62:${port}/api`);
+    await app.init();
+    cachedApp = app;
+  }
+  return cachedApp;
 }
-bootstrap();
+
+// Standalone server mode (Local & LAN dev/production)
+if (!process.env.VERCEL) {
+  async function bootstrap() {
+    const app = await createApp(server);
+    const port = process.env.PORT || 5000;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 FinFlow Backend is running on:`);
+    console.log(`   - Local:   http://localhost:${port}/api`);
+    console.log(`   - Network: http://10.10.13.62:${port}/api`);
+  }
+  bootstrap();
+}
+
+// Export handler for Vercel Serverless Functions
+export default async function handler(req: any, res: any) {
+  await createApp(server);
+  server(req, res);
+}
+
 
