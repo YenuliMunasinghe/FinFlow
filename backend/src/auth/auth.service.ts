@@ -116,33 +116,37 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const identifier = (dto.memberId || dto.email || '').trim();
+    if (!identifier) {
+      throw new UnauthorizedException('Please provide your Member ID or Email.');
+    }
+
     let user: any = null;
     try {
-      if (dto.memberId) {
+      if (this.prisma.isDbAvailable()) {
         user = await this.prisma.user.findFirst({
-          where: { memberId: dto.memberId },
-        });
-      }
-      if (!user && dto.email) {
-        user = await this.prisma.user.findUnique({
-          where: { email: dto.email },
+          where: {
+            OR: [
+              { memberId: { equals: identifier, mode: 'insensitive' } },
+              { email: { equals: identifier, mode: 'insensitive' } },
+            ],
+          },
         });
       }
     } catch (err: any) {
-      this.logger.warn(`Database fallback for login query: ${err.message}`);
+      this.logger.warn(`Database query during login: ${err.message}`);
     }
 
     if (!user) {
       user = SEED_USERS.find(
         (u) =>
-          (dto.memberId &&
-            u.memberId.toLowerCase() === dto.memberId.toLowerCase()) ||
-          (dto.email && u.email.toLowerCase() === dto.email.toLowerCase()),
+          u.memberId.toLowerCase() === identifier.toLowerCase() ||
+          u.email.toLowerCase() === identifier.toLowerCase(),
       );
     }
 
     if (!user) {
-      throw new UnauthorizedException('Invalid Member ID or Password.');
+      throw new UnauthorizedException('Invalid Member ID / Email or Password.');
     }
 
     let isPasswordValid = false;
@@ -157,14 +161,16 @@ export class AuthService {
     }
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid Member ID or Password.');
+      throw new UnauthorizedException('Invalid Member ID / Email or Password.');
     }
 
     try {
-      await this.prisma.user.update({
-        where: { id: user.id },
-        data: { lastLogin: new Date() },
-      });
+      if (this.prisma.isDbAvailable()) {
+        await this.prisma.user.update({
+          where: { id: user.id },
+          data: { lastLogin: new Date() },
+        });
+      }
     } catch {
       // Ignore DB update warning if offline
     }
