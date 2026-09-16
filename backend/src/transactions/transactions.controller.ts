@@ -43,7 +43,7 @@ export class TransactionsController {
 
   @Post()
   async create(@Request() req: any, @Body() createDto: CreateTransactionDto) {
-    const userId = req.user?.userId || 'guest-user';
+    const userId = req.user?.id || req.user?.userId || 'guest-user';
     return this.transactionsService.create(userId, createDto);
   }
 
@@ -64,7 +64,7 @@ export class TransactionsController {
   @UseGuards(RolesGuard)
   @Roles(Role.PRESIDENT)
   async approve(@Param('id') id: string, @Request() req: any) {
-    const approverId = req.user?.userId;
+    const approverId = req.user?.id || req.user?.userId;
     return this.transactionsService.approveTransaction(id, approverId);
   }
 

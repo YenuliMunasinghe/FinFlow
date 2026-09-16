@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Role, useAuth } from '@/context/AuthContext';
@@ -8,7 +8,7 @@ import { useToast } from '@/context/ToastContext';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register } = useAuth();
+  const { user, isLoading: isAuthLoading, register } = useAuth();
   const { success, error } = useToast();
 
   const [name, setName] = useState('');
@@ -18,15 +18,25 @@ export default function RegisterPage() {
   const [role, setRole] = useState<Role>(Role.COMMITTEE_MEMBER);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [isAuthLoading, user, router]);
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim() || !email.trim() || !password) {
+      error('Missing Fields', 'Please complete all required fields.');
+      return;
+    }
     setIsLoading(true);
     try {
       await register(name, email, password, memberId, role);
       success('Account Created', `Welcome ${name}!`);
       router.push('/dashboard');
-    } catch {
-      error('Registration Failed', 'Please verify your details.');
+    } catch (err: any) {
+      error('Registration Failed', err?.message || 'Please verify your details.');
     } finally {
       setIsLoading(false);
     }

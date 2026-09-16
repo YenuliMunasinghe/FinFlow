@@ -21,39 +21,12 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
-export const DEMO_USERS: Record<string, UserProfile> = {
-  PRESIDENT: {
-    id: 'user-pres-1',
-    email: 'president@finflow.org',
-    name: 'Kavinda Perera',
-    memberId: 'EG/2021/8842',
-    role: Role.PRESIDENT,
-    society: 'Engineering Society & Rotaract Club',
-  },
-  TREASURER: {
-    id: 'user-treas-1',
-    email: 'treasurer@finflow.org',
-    name: 'Senuri Silva',
-    memberId: 'TR/2022/1042',
-    role: Role.TREASURER,
-    society: 'Engineering Society & Rotaract Club',
-  },
-  COMMITTEE_MEMBER: {
-    id: 'user-mem-1',
-    email: 'member@finflow.org',
-    name: 'Malith Bandara',
-    memberId: 'MEM/2023/5021',
-    role: Role.COMMITTEE_MEMBER,
-    society: 'Engineering Society & Rotaract Club',
-  },
-};
-
 interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
   isLoading: boolean;
   isDemoMode: boolean;
-  login: (memberId: string, password?: string) => Promise<void>;
+  login: (identifier: string, password?: string) => Promise<void>;
   register: (name: string, email: string, password: string, memberId?: string, role?: Role) => Promise<void>;
   logout: () => void;
   switchDemoRole: (role: Role) => void;
@@ -66,44 +39,61 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.10.13.62:5000/api'
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(() => {
     if (typeof window !== 'undefined') {
-      const storedDemoRole = localStorage.getItem('finflow_demo_role') as Role | null;
-      if (storedDemoRole && DEMO_USERS[storedDemoRole]) {
-        return DEMO_USERS[storedDemoRole];
+      try {
+        const storedUser = localStorage.getItem('finflow_user');
+        if (storedUser) {
+          return JSON.parse(storedUser);
+        }
+      } catch {
+        // Ignore JSON parse errors
       }
     }
-    return DEMO_USERS.PRESIDENT;
+    return null;
   });
 
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('finflow_token');
+    }
+    return null;
+  });
+
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
 
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('finflow_token');
-    localStorage.removeItem('finflow_demo_role');
+    setIsDemoMode(false);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('finflow_token');
+      localStorage.removeItem('finflow_user');
+      localStorage.removeItem('finflow_demo_role');
+    }
   }, []);
 
   const switchDemoRole = useCallback((role: Role) => {
-    const demoUser = DEMO_USERS[role] || DEMO_USERS.PRESIDENT;
-    setUser(demoUser);
-    setIsDemoMode(true);
-    localStorage.setItem('finflow_demo_role', role);
-  }, []);
+    if (user) {
+      const updatedUser = { ...user, role };
+      setUser(updatedUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('finflow_user', JSON.stringify(updatedUser));
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('finflow_token');
+    let isMounted = true;
+    const storedToken = typeof window !== 'undefined' ? localStorage.getItem('finflow_token') : null;
 
     if (!storedToken) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setUser(null);
+      setToken(null);
       setIsLoading(false);
       return;
     }
 
-    let isMounted = true;
-
-    async function initAuth() {
+    async function verifyAuth() {
       try {
         const response = await fetch(`${API_URL}/auth/profile`, {
           headers: {
@@ -117,17 +107,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setToken(storedToken);
             setUser(userData);
             setIsDemoMode(false);
+            localStorage.setItem('finflow_user', JSON.stringify(userData));
           }
         } else {
+          // Token expired or invalid
           if (isMounted) {
             setToken(null);
-            setIsDemoMode(true);
+            setUser(null);
+            localStorage.removeItem('finflow_token');
+            localStorage.removeItem('finflow_user');
           }
         }
       } catch {
-        if (isMounted) {
-          setIsDemoMode(true);
-        }
+        // Network offline / unreachable; keep cached session if available
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -135,31 +127,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
-    initAuth();
+    verifyAuth();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const login = async (memberId: string, password?: string) => {
+  const login = async (identifier: string, password?: string) => {
     setIsLoading(true);
-
-    if (memberId.toUpperCase().includes('EG') || memberId.toUpperCase().includes('PRESIDENT')) {
-      switchDemoRole(Role.PRESIDENT);
-      setIsLoading(false);
-      return;
-    }
-    if (memberId.toUpperCase().includes('TR') || memberId.toUpperCase().includes('TREASURER')) {
-      switchDemoRole(Role.TREASURER);
-      setIsLoading(false);
-      return;
-    }
-    if (memberId.toUpperCase().includes('MEM') || memberId.toUpperCase().includes('MEMBER')) {
-      switchDemoRole(Role.COMMITTEE_MEMBER);
-      setIsLoading(false);
-      return;
-    }
+    const cleanIdentifier = identifier.trim();
+    const cleanPassword = password || '';
 
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -167,43 +145,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ memberId, password: password || 'Password123!' }),
+        body: JSON.stringify({
+          memberId: cleanIdentifier,
+          email: cleanIdentifier,
+          password: cleanPassword,
+        }),
       });
 
       if (!response.ok) {
-        setUser({
-          id: `usr-${Date.now()}`,
-          name: memberId.split('/')[0] || 'Society Executive',
-          email: `${memberId.toLowerCase().replace(/[^a-z0-9]/g, '')}@finflow.org`,
-          memberId: memberId,
-          role: Role.PRESIDENT,
-          society: 'Engineering Society & Rotaract Club',
-        });
-        setIsDemoMode(true);
-        return;
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Invalid Member ID / Email or Password.');
       }
 
       const data = await response.json();
       setToken(data.accessToken);
       setUser(data.user);
       setIsDemoMode(false);
-      localStorage.setItem('finflow_token', data.accessToken);
-    } catch {
-      setUser({
-        id: `usr-${Date.now()}`,
-        name: 'Society Member',
-        email: `${memberId.toLowerCase().replace(/[^a-z0-9]/g, '')}@finflow.org`,
-        memberId: memberId,
-        role: Role.PRESIDENT,
-        society: 'Engineering Society & Rotaract Club',
-      });
-      setIsDemoMode(true);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('finflow_token', data.accessToken);
+        localStorage.setItem('finflow_user', JSON.stringify(data.user));
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (name: string, email: string, password: string, memberId?: string, role?: Role) => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    memberId?: string,
+    role?: Role,
+  ) => {
     setIsLoading(true);
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
@@ -211,37 +185,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password, memberId, role }),
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          memberId: memberId?.trim(),
+          role: role || Role.COMMITTEE_MEMBER,
+        }),
       });
 
       if (!response.ok) {
-        setUser({
-          id: `usr-${Date.now()}`,
-          name,
-          email,
-          memberId: memberId || 'EG/2024/9901',
-          role: role || Role.COMMITTEE_MEMBER,
-          society: 'Engineering Society & Rotaract Club',
-        });
-        setIsDemoMode(true);
-        return;
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Registration failed. Please verify your details.');
       }
 
       const data = await response.json();
       setToken(data.accessToken);
       setUser(data.user);
       setIsDemoMode(false);
-      localStorage.setItem('finflow_token', data.accessToken);
-    } catch {
-      setUser({
-        id: `usr-${Date.now()}`,
-        name,
-        email,
-        memberId: memberId || 'EG/2024/9901',
-        role: role || Role.COMMITTEE_MEMBER,
-        society: 'Engineering Society & Rotaract Club',
-      });
-      setIsDemoMode(true);
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('finflow_token', data.accessToken);
+        localStorage.setItem('finflow_user', JSON.stringify(data.user));
+      }
     } finally {
       setIsLoading(false);
     }
@@ -272,3 +238,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

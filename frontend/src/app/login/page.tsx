@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth, Role } from '@/context/AuthContext';
-import { Eye, EyeOff, ShieldCheck, Wallet, UserCheck } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { user, isLoading: isAuthLoading, login } = useAuth();
   const { success, error } = useToast();
 
   const [memberId, setMemberId] = useState('');
@@ -17,9 +17,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [isAuthLoading, user, router]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberId || !password) {
+    if (!memberId.trim() || !password) {
       error('Missing Credentials', 'Please enter your Member ID/Email and password.');
       return;
     }
@@ -28,8 +34,8 @@ export default function LoginPage() {
       await login(memberId, password);
       success('Welcome back!', 'Signed into FinFlow.');
       router.push('/dashboard');
-    } catch {
-      error('Login Failed', 'Please check your credentials.');
+    } catch (err: any) {
+      error('Login Failed', err?.message || 'Invalid Member ID / Email or Password.');
     } finally {
       setIsLoading(false);
     }
