@@ -2,8 +2,8 @@ import { IsNotEmpty, IsString, IsOptional } from 'class-validator';
 
 export class LoginDto {
   @IsString()
-  @IsNotEmpty({ message: 'Member ID is required.' })
-  memberId: string;
+  @IsOptional()
+  memberId?: string;
 
   @IsString()
   @IsOptional()
@@ -13,3 +13,4 @@ export class LoginDto {
   @IsNotEmpty({ message: 'Password is required.' })
   password: string;
 }
+
