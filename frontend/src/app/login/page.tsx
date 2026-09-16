@@ -3,170 +3,148 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, Role } from '@/context/AuthContext';
+import { Eye, EyeOff, ShieldCheck, Wallet, UserCheck } from 'lucide-react';
+import { useToast } from '@/context/ToastContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, switchDemoRole } = useAuth();
+  const { success, error } = useToast();
+
   const [memberId, setMemberId] = useState('EG/2021/8842');
   const [password, setPassword] = useState('Password123!');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setErrorMessage(null);
     try {
       await login(memberId, password);
+      success('Welcome back!', 'Signed into FinFlow.');
       router.push('/dashboard');
-    } catch (err: unknown) {
-      if (err instanceof Error) {
-        setErrorMessage(err.message);
-      } else {
-        setErrorMessage('Login failed. Please check your Member ID and Password.');
-      }
+    } catch {
+      error('Login Failed', 'Please check your credentials.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleQuickRole = (role: Role, defaultId: string) => {
+    setMemberId(defaultId);
+    switchDemoRole(role);
+    success('Signed in', `Authenticated as ${role.replace('_', ' ')}.`);
+    router.push('/dashboard');
+  };
+
   return (
-    <div className="min-h-screen bg-[#f8f9ff] text-[#0b1c30] flex flex-col justify-between selection:bg-[#b3d1fd] selection:text-[#3b5a7f]">
-      <main className="w-full flex-1 flex flex-col justify-center">
-        <div className="w-full min-h-[calc(100vh-64px)] flex flex-col lg:flex-row">
-          
-          {/* LEFT PANE: FinFlow Consistent System Description */}
-          <div className="lg:w-5/12 xl:w-9/20 bg-[#0e1c2f] text-white flex flex-col justify-between p-6 md:p-10 lg:p-12 relative overflow-hidden shadow-2xl">
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
-            <div className="absolute -right-24 -bottom-24 w-96 h-96 rounded-full bg-[#38BDF8]/10 blur-3xl pointer-events-none"></div>
-            
-            {/* Brand Header */}
-            <div className="relative z-10 space-y-2">
-              <span className="font-['Hanken_Grotesk'] text-3xl font-bold tracking-tight text-white block">
-                Fin<span className="text-[#38BDF8]">Flow</span>
-              </span>
-              <span className="font-['JetBrains_Mono'] text-xs text-[#77849c] uppercase tracking-widest block">
-                Society Accounting System
-              </span>
-            </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Light-mode Ambient Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-b from-blue-100/50 via-indigo-50/30 to-transparent blur-3xl pointer-events-none" />
 
-            {/* Consistent System Description */}
-            <div className="relative z-10 my-12 space-y-4">
-              <h2 className="font-['Hanken_Grotesk'] text-2xl font-bold text-white">
-                Student Club Financial Management
-              </h2>
-              <p className="text-sm text-gray-300 leading-relaxed max-w-md">
-                Event-driven financial management and accounting for university student societies.
-              </p>
-            </div>
+      <div className="max-w-md w-full bg-white/95 backdrop-blur-sm rounded-2xl border border-slate-200/80 p-8 shadow-xl shadow-slate-200/70 space-y-6 relative z-10">
+        {/* Brand */}
+        <div className="text-center space-y-1">
+          <Link href="/" className="inline-flex items-center">
+            <span className="font-bold text-2xl text-slate-900 tracking-tight">
+              Fin<span className="text-blue-600">Flow</span>
+            </span>
+          </Link>
+          <p className="text-xs text-slate-500 mt-1">Sign in to your society financial workspace</p>
+        </div>
 
-            {/* Footer */}
-            <div className="relative z-10 pt-4 text-gray-400 font-['JetBrains_Mono'] text-[11px]">
-              FinFlow System v1.0
+        {/* 1-Click Test Sign-ins */}
+        <div className="space-y-2">
+          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block text-center">
+            Quick Test Login:
+          </span>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => handleQuickRole(Role.PRESIDENT, 'EG/2021/8842')}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-center transition-colors"
+            >
+              <ShieldCheck className="w-4 h-4 text-blue-600 mx-auto mb-1" />
+              <div className="font-bold text-[11px] text-slate-900">President</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickRole(Role.TREASURER, 'TR/2022/1042')}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 text-center transition-colors"
+            >
+              <Wallet className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
+              <div className="font-bold text-[11px] text-slate-900">Treasurer</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickRole(Role.COMMITTEE_MEMBER, 'MEM/2023/5021')}
+              className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-center transition-colors"
+            >
+              <UserCheck className="w-4 h-4 text-indigo-600 mx-auto mb-1" />
+              <div className="font-bold text-[11px] text-slate-900">Member</div>
+            </button>
+          </div>
+        </div>
+
+        <div className="relative flex items-center justify-center">
+          <hr className="w-full border-slate-200" />
+          <span className="absolute bg-white px-3 text-[11px] text-slate-400 font-medium">or</span>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Member ID / Email
+            </label>
+            <input
+              type="text"
+              required
+              value={memberId}
+              onChange={(e) => setMemberId(e.target.value)}
+              placeholder="e.g. EG/2021/8842 or member@finflow.org"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Password</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter password"
+                className="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
-          {/* RIGHT PANE: FinFlow Login Console */}
-          <div className="lg:w-7/12 xl:w-11/20 bg-[#f8f9ff] flex flex-col justify-center px-6 sm:px-12 md:px-16 lg:px-20 py-12">
-            <div className="max-w-md w-full mx-auto space-y-6">
-              
-              {/* Login Header */}
-              <div className="space-y-2">
-                <h1 className="font-['Hanken_Grotesk'] text-3xl font-bold tracking-tight text-[#0b1c30]">
-                  Sign in to FinFlow
-                </h1>
-                <p className="text-sm text-[#44474c]">
-                  Access your society financial management portal and treasury workspace.
-                </p>
-              </div>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50"
+          >
+            {isLoading ? 'Signing In...' : 'Sign In'}
+          </button>
+        </form>
 
-              {/* Error message banner if any */}
-              {errorMessage && (
-                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs">
-                  {errorMessage}
-                </div>
-              )}
-
-              {/* Login Form (Member ID & Password) */}
-              <form className="space-y-4" onSubmit={handleLogin}>
-                {/* Student / Member ID */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-[#0b1c30]">
-                    Student / Member ID
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={memberId}
-                    onChange={(e) => setMemberId(e.target.value)}
-                    placeholder="e.g. EG/2021/8842"
-                    className="w-full px-4 py-2.5 bg-white text-[#0b1c30] rounded border border-[#c5c6cd] text-sm shadow-sm focus:outline-none focus:border-[#426086] transition-colors"
-                  />
-                </div>
-
-                {/* Password Field */}
-                <div className="space-y-1">
-                  <label className="block text-xs font-semibold text-[#0b1c30]">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter password"
-                      className="w-full pl-4 pr-12 py-2.5 bg-white text-[#0b1c30] rounded border border-[#c5c6cd] text-sm shadow-sm focus:outline-none focus:border-[#426086] transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-[#426086] hover:text-[#0b1c30]"
-                    >
-                      {showPassword ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full py-3 px-6 rounded-lg bg-[#0e1c2f] text-white font-semibold text-sm shadow-md hover:bg-[#1a2d47] transition-all flex items-center justify-center gap-2 disabled:opacity-70"
-                >
-                  <span>{isLoading ? 'Authenticating...' : 'Sign In to FinFlow'}</span>
-                </button>
-              </form>
-
-              {/* Registration Link */}
-              <div className="p-4 rounded-lg bg-[#e5eeff] text-center space-y-1">
-                <p className="text-xs text-[#44474c]">
-                  New society member or committee appointee?
-                </p>
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-1 text-xs font-bold text-[#0e1c2f] hover:text-[#426086] transition-colors"
-                >
-                  <span>Register a new account</span>
-                </Link>
-              </div>
-
-            </div>
-          </div>
+        <div className="text-center text-xs text-slate-500">
+          New member?{' '}
+          <Link href="/register" className="font-semibold text-blue-600 hover:underline">
+            Create an account
+          </Link>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full bg-[#eff4ff] border-t border-[#c5c6cd]/30 py-3">
-        <div className="max-w-7xl mx-auto px-6 flex items-center justify-between text-xs text-[#44474c]">
-          <span>FinFlow — Society Accounting System</span>
-        </div>
-      </footer>
+      </div>
     </div>
   );
 }
-
-
-

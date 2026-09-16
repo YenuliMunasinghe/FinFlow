@@ -1,17 +1,17 @@
-// Prisma schema for FinFlow MS SQL Server Database
+// Prisma schema for FinFlow Database (PostgreSQL / Supabase)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlserver"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model User {
   id                    String        @id @default(uuid())
-  memberId              String?       @unique // Student / Society Member ID
+  memberId              String?       @unique // Society Member ID
   email                 String        @unique
   passwordHash          String
   name                  String
@@ -32,7 +32,7 @@ model Event {
   id               String           @id @default(uuid())
   name             String           // Event Name
   venue            String?          // Event Venue
-  description      String?          @db.NVarChar(Max)
+  description      String?          @db.Text
   status           String           @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED, CLOSED
   totalBudget      Decimal          @db.Decimal(18, 2) @default(0.00)
   startDate        DateTime
@@ -83,8 +83,8 @@ model Transaction {
   receiptUrl            String?           // Receipt image / PDF URL
   status                String            @default("PENDING") // PENDING, APPROVED, REJECTED
   isOverBudget          Boolean           @default(false)   // Budget comparison flag
-  overrideJustification String?           @db.NVarChar(Max) // Justification if over budget
-  rejectionReason       String?           @db.NVarChar(Max)
+  overrideJustification String?           @db.Text // Justification if over budget
+  rejectionReason       String?           @db.Text
   
   // Linked Event & Budget Item
   eventId               String
@@ -118,7 +118,7 @@ model AuditLog {
   action     String
   entityType String
   entityId   String?
-  details    String?  @db.NVarChar(Max)
+  details    String?  @db.Text
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   createdAt  DateTime @default(now())

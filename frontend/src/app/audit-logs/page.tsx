@@ -1,184 +1,128 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Navigation from '@/components/Navigation';
-import { useAuth } from '@/context/AuthContext';
+import { Search } from 'lucide-react';
 
-interface AuditLogEntry {
+interface AuditItem {
   id: string;
   action: string;
-  entityType: string;
-  entityId?: string;
-  details?: string;
   user: string;
   role: string;
-  timestamp: string;
+  date: string;
+  details: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const DEFAULT_LOGS: AuditItem[] = [
+  {
+    id: 'log-1',
+    action: 'Approved Transaction',
+    user: 'Kavinda Perera',
+    role: 'President',
+    date: 'Sep 14, 2024 • 10:45 AM',
+    details: 'Approved voucher #TRX-089 (Dialog Axiata Sponsorship, Rs. 150,000.00).',
+  },
+  {
+    id: 'log-2',
+    action: 'Recorded Income',
+    user: 'Senuri Silva',
+    role: 'Treasurer',
+    date: 'Sep 14, 2024 • 10:24 AM',
+    details: 'Recorded deposit from Dialog Axiata PLC for Annual Tech Symposium.',
+  },
+  {
+    id: 'log-3',
+    action: 'Submitted Expense',
+    user: 'Malith Bandara',
+    role: 'Member',
+    date: 'Sep 13, 2024 • 04:12 PM',
+    details: 'Submitted claim #TRX-088 for Stage Sound & Lighting Rental (Rs. 28,500.00).',
+  },
+  {
+    id: 'log-4',
+    action: 'Created Event',
+    user: 'Senuri Silva',
+    role: 'Treasurer',
+    date: 'Sep 10, 2024 • 02:15 PM',
+    details: 'Created event "Annual Tech Symposium 2024" with budget Rs. 450,000.00.',
+  },
+  {
+    id: 'log-5',
+    action: 'User Registered',
+    user: 'Malith Bandara',
+    role: 'Member',
+    date: 'Sep 08, 2024 • 09:30 AM',
+    details: 'Created new account with Member ID: MEM/2023/5021.',
+  },
+];
 
 export default function AuditLogsPage() {
-  const { token } = useAuth();
-  const [logs, setLogs] = useState<AuditLogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState('ALL');
+  const [logs] = useState<AuditItem[]>(DEFAULT_LOGS);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchAuditLogs = async () => {
-    try {
-      setIsLoading(true);
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${API_URL}/audit-logs`, { headers });
-      if (response.ok) {
-        const data = await response.json();
-        setLogs(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch audit logs:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAuditLogs();
-  }, [token]);
-
-  const filtered = logs.filter((log) => {
-    const matchesFilter = filter === 'ALL' ? true : log.action === filter;
-    const matchesSearch =
+  const filtered = logs.filter(
+    (log) =>
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (log.details && log.details.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    return matchesFilter && matchesSearch;
-  });
+      log.details.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <Navigation pageTitle="Immutable Audit Logs">
+    <Navigation pageTitle="Audit Logs">
       <div className="space-y-6">
-        {/* Header Ribbon */}
-        <section className="bg-white p-6 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Header */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm text-[#0e1c2f]">history</span>
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#426086] font-semibold uppercase tracking-wider">
-                System Governance & Audit Security
-              </span>
-            </div>
-            <h2 className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight mt-1">
-              Immutable Audit Trail
-            </h2>
-            <p className="text-xs text-[#44474c] mt-0.5">
-              Permanent, tamper-evident log of all financial sign-offs, transaction entries, and user provisioning actions.
+            <h2 className="text-xl font-bold text-slate-900">Activity History</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              History of all transaction submissions, approvals, and event updates.
             </p>
           </div>
 
-          <div className="relative w-64">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#44474c] text-base">
-              search
-            </span>
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
-              placeholder="Search audit trail..."
+              placeholder="Search history..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-9 pl-9 pr-4 bg-[#eff4ff] rounded-lg text-xs text-[#0b1c30] placeholder:text-[#44474c] focus:outline-none focus:ring-1 focus:ring-[#426086]"
+              className="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
             />
           </div>
-        </section>
+        </div>
 
-        {/* Audit Log Table Card */}
-        <section className="bg-white rounded-xl shadow-xs border border-[#c5c6cd]/30 overflow-hidden">
-          <div className="p-4 border-b border-[#c5c6cd]/20 flex flex-wrap items-center justify-between gap-3 bg-[#f8f9ff]/50">
-            <div className="inline-flex p-1 bg-[#eff4ff] rounded-lg text-xs">
-              {(['ALL', 'VOUCHER_SIGN_OFF', 'TRANSACTION_SUBMITTED', 'EVENT_CREATED', 'USER_REGISTERED'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setFilter(tab)}
-                  className={`px-3 py-1.5 font-semibold rounded-md transition-all ${
-                    filter === tab
-                      ? 'bg-white text-[#0b1c30] shadow-xs'
-                      : 'text-[#44474c] hover:text-[#0b1c30]'
-                  }`}
-                >
-                  {tab === 'ALL'
-                    ? 'All Logs'
-                    : tab === 'VOUCHER_SIGN_OFF'
-                    ? 'Sign-offs'
-                    : tab === 'TRANSACTION_SUBMITTED'
-                    ? 'Submissions'
-                    : tab === 'EVENT_CREATED'
-                    ? 'Events'
-                    : 'User Events'}
-                </button>
-              ))}
-            </div>
-
-            <span className="font-['JetBrains_Mono'] text-xs text-[#426086] font-semibold">
-              Showing {filtered.length} of {logs.length} audit entries
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="p-12 text-center text-xs text-[#44474c]">Loading audit log trail...</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#eff4ff] text-[#44474c] uppercase font-semibold text-[10px]">
-                  <tr>
-                    <th className="p-4">Timestamp</th>
-                    <th className="p-4">Action Type</th>
-                    <th className="p-4">User & Role</th>
-                    <th className="p-4">Details & Target Ref</th>
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-500 font-semibold text-[11px] border-b border-slate-100">
+                <tr>
+                  <th className="py-3 px-4">Date & Time</th>
+                  <th className="py-3 px-4">Action</th>
+                  <th className="py-3 px-4">User & Role</th>
+                  <th className="py-3 px-4">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filtered.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50">
+                    <td className="py-3.5 px-4 text-slate-500 whitespace-nowrap">{log.date}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-1 rounded-full bg-slate-100 font-semibold text-[10px] text-slate-800">
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-900">{log.user}</div>
+                      <div className="text-[10px] text-slate-400 capitalize">{log.role}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-700">{log.details}</td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-[#c5c6cd]/20 font-['JetBrains_Mono']">
-                  {filtered.map((log) => (
-                    <tr key={log.id} className="hover:bg-[#eff4ff]/50 transition-colors">
-                      <td className="p-4 text-[11px] text-[#44474c] whitespace-nowrap">
-                        {log.timestamp}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                            log.action === 'VOUCHER_SIGN_OFF'
-                              ? 'bg-[#10B981]/10 text-[#10B981]'
-                              : log.action === 'TRANSACTION_SUBMITTED'
-                              ? 'bg-[#eff4ff] text-[#426086]'
-                              : 'bg-purple-50 text-purple-700'
-                          }`}
-                        >
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="p-4 font-semibold text-[#0b1c30] font-['Inter']">
-                        <div>{log.user}</div>
-                        <span className="text-[10px] text-[#426086] font-['JetBrains_Mono'] font-bold">
-                          {log.role}
-                        </span>
-                      </td>
-                      <td className="p-4 font-['Inter'] text-[#0b1c30]">
-                        <div className="text-xs font-semibold">{log.details || 'No additional details.'}</div>
-                        {log.entityId && (
-                          <div className="font-['JetBrains_Mono'] text-[10px] text-[#426086] mt-0.5">
-                            Target Entity: #{log.entityId}
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </Navigation>
   );

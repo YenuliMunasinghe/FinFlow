@@ -1,6 +1,6 @@
-# FinFlow — University Society Accounting & Financial Management System
+# FinFlow — Society Accounting & Financial Management System
 
-An auditable, event-driven, full-stack financial management and accounting system designed for university societies and student clubs.
+An auditable, event-driven, full-stack financial management and accounting system designed for societies, associations, and clubs.
 
 FinFlow combines enterprise accounting principles with modern software engineering to manage financial activities with strict role-based governance, pre-event budgeting, real-time variance validation, transaction approval workflows, and financial intelligence dashboards.
 
@@ -105,7 +105,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The frontend web application will be accessible at: `http://localhost:3000`
+The frontend web application will be accessible at: `http://localhost:3500` (or `http://localhost:3000`)
 
 ---
 

@@ -29,7 +29,10 @@ export class TransactionsController {
   ) {}
 
   @Get()
-  async findAll(@Query('status') status?: string, @Query('type') type?: string) {
+  async findAll(
+    @Query('status') status?: string,
+    @Query('type') type?: string,
+  ) {
     return this.transactionsService.findAll(status, type);
   }
 
@@ -75,7 +78,10 @@ export class TransactionsController {
   @Patch(':id/revision')
   @UseGuards(RolesGuard)
   @Roles(Role.PRESIDENT, Role.ADMIN)
-  async requestRevision(@Param('id') id: string, @Body('instructions') instructions?: string) {
+  async requestRevision(
+    @Param('id') id: string,
+    @Body('instructions') instructions?: string,
+  ) {
     return this.transactionsService.requestRevision(id, instructions);
   }
 }

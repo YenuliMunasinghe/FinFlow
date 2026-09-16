@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsEnum, IsNumber, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export enum TransactionType {
   INCOME = 'INCOME',
@@ -10,7 +17,9 @@ export class CreateTransactionDto {
   @IsNotEmpty({ message: 'Transaction title is required.' })
   title: string;
 
-  @IsEnum(TransactionType, { message: 'Type must be either INCOME or EXPENSE.' })
+  @IsEnum(TransactionType, {
+    message: 'Type must be either INCOME or EXPENSE.',
+  })
   @IsNotEmpty({ message: 'Transaction type is required.' })
   type: TransactionType;
 

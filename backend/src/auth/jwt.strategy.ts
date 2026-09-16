@@ -15,7 +15,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'finflow_super_secret_jwt_key_2026',
+      secretOrKey:
+        process.env.JWT_SECRET || 'finflow_super_secret_jwt_key_2026',
     });
   }
 
@@ -32,7 +33,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User no longer exists or session is invalid.');
+      throw new UnauthorizedException(
+        'User no longer exists or session is invalid.',
+      );
     }
 
     return user;

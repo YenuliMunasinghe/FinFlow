@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { AuthProvider } from '../context/AuthContext';
+import { ToastProvider } from '../context/ToastContext';
+import { ToastContainer } from '../components/Toast';
 
 export const metadata: Metadata = {
-  title: 'FinFlow — Society Accounting & Financial Management System',
-  description: 'Auditable, event-driven financial management and accounting system for university student societies.',
+  title: 'FinFlow — Society Accounting & Treasury Management Platform',
+  description: 'Auditable, event-driven financial management and accounting system with dual-control presidential sign-offs for societies and organizations.',
 };
 
 export default function RootLayout({
@@ -14,14 +16,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased">
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
-        />
-      </head>
-      <body className="min-h-full flex flex-col bg-[#f8f9ff] text-[#0b1c30]">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="min-h-full flex flex-col bg-[#F8FAFC] text-[#0F172A]">
+        <AuthProvider>
+          <ToastProvider>
+            {children}
+            <ToastContainer />
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -4,447 +4,308 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
 import { useAuth } from '@/context/AuthContext';
+import {
+  Wallet,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Plus,
+  Calendar,
+  CheckCircle,
+  Clock,
+} from 'lucide-react';
+import AddTransactionModal from '@/components/Modals/AddTransactionModal';
+import AddEventModal from '@/components/Modals/AddEventModal';
+import TransactionDetailModal, { SimpleTransaction } from '@/components/Modals/TransactionDetailModal';
+import { useToast } from '@/context/ToastContext';
+
+const DEFAULT_TRANSACTIONS: SimpleTransaction[] = [
+  {
+    id: 'trx-1',
+    refNo: 'TRX-089',
+    title: 'Dialog Axiata Sponsorship Deposit',
+    type: 'INCOME',
+    amount: 150000,
+    category: 'Corporate Sponsorship',
+    event: 'Annual Tech Symposium',
+    date: 'Sep 14, 2024',
+    status: 'APPROVED',
+    submitter: 'Senuri Silva (Treasurer)',
+  },
+  {
+    id: 'trx-2',
+    refNo: 'TRX-088',
+    title: 'Stage Sound & Lighting Rental',
+    type: 'EXPENSE',
+    amount: 28500,
+    category: 'Logistics',
+    event: 'Annual Tech Symposium',
+    date: 'Sep 13, 2024',
+    status: 'PENDING',
+    submitter: 'Malith Bandara',
+  },
+  {
+    id: 'trx-3',
+    refNo: 'TRX-087',
+    title: 'Certificates & Badge Printing',
+    type: 'EXPENSE',
+    amount: 14000,
+    category: 'Printing',
+    event: 'Annual Tech Symposium',
+    date: 'Sep 11, 2024',
+    status: 'APPROVED',
+    submitter: 'Kusal Mendis',
+  },
+  {
+    id: 'trx-4',
+    refNo: 'TRX-086',
+    title: 'Workshop Lunch Refreshments',
+    type: 'EXPENSE',
+    amount: 34000,
+    category: 'Food & Catering',
+    event: 'Inter-University Hackathon',
+    date: 'Sep 09, 2024',
+    status: 'APPROVED',
+    submitter: 'Dinuka Fernando',
+  },
+  {
+    id: 'trx-5',
+    refNo: 'TRX-085',
+    title: 'Member Annual Registration Dues',
+    type: 'INCOME',
+    amount: 65000,
+    category: 'Member Dues',
+    event: 'General Administration',
+    date: 'Sep 05, 2024',
+    status: 'APPROVED',
+    submitter: 'Senuri Silva',
+  },
+];
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
-  const [showIncomeModal, setShowIncomeModal] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'approved' | 'pending'>('all');
+  const { success } = useToast();
 
-  // Form states
-  const [expenseTitle, setExpenseTitle] = useState('');
-  const [expenseAmount, setExpenseAmount] = useState('');
-  const [expenseCategory, setExpenseCategory] = useState('Logistics');
-  const [incomeTitle, setIncomeTitle] = useState('');
-  const [incomeAmount, setIncomeAmount] = useState('');
-  const [incomeSource, setIncomeSource] = useState('Sponsorship');
+  const [transactions, setTransactions] = useState<SimpleTransaction[]>(DEFAULT_TRANSACTIONS);
+  const [showAddTx, setShowAddTx] = useState(false);
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [selectedTx, setSelectedTx] = useState<SimpleTransaction | null>(null);
 
-  const userDisplayName = user?.name || 'Kavinda Perera';
+  const totalIncome = transactions
+    .filter((t) => t.type === 'INCOME' && t.status === 'APPROVED')
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const handleExpenseSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(`Expense Request "${expenseTitle}" for Rs. ${expenseAmount} submitted for executive approval!`);
-    setExpenseTitle('');
-    setExpenseAmount('');
-    setShowExpenseModal(false);
+  const totalExpense = transactions
+    .filter((t) => t.type === 'EXPENSE' && t.status === 'APPROVED')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const balance = totalIncome - totalExpense;
+  const pendingCount = transactions.filter((t) => t.status === 'PENDING').length;
+
+  const handleApprove = (id: string) => {
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: 'APPROVED' } : t))
+    );
+    success('Transaction Approved', 'Status updated to Approved.');
   };
 
-  const handleIncomeSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    alert(`Income Deposit "${incomeTitle}" for Rs. ${incomeAmount} recorded successfully!`);
-    setIncomeTitle('');
-    setIncomeAmount('');
-    setShowIncomeModal(false);
+  const handleReject = (id: string) => {
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: 'REJECTED' } : t))
+    );
+    success('Transaction Rejected', 'Status updated to Rejected.');
+  };
+
+  const handleDelete = (id: string) => {
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+    success('Transaction Deleted', 'Entry removed from list.');
   };
 
   return (
-    <Navigation pageTitle="Society Dashboard">
+    <Navigation pageTitle="Dashboard">
       <div className="space-y-6">
-        {/* Welcome Banner */}
-        <section className="bg-white p-6 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Welcome & Quick Actions */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#426086] font-semibold uppercase tracking-wider">
-                Engineering Rotaract & Tech Club
-              </span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#c5c6cd]"></span>
-              <span className="font-['JetBrains_Mono'] text-[11px] text-[#44474c]">Semester FY 2024/2025</span>
-            </div>
-            <h2 className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight mt-1">
-              Welcome back, {userDisplayName}!
+            <h2 className="text-xl font-bold text-slate-900">
+              Welcome, {user?.name || 'Society Member'}!
             </h2>
-            <p className="text-xs text-[#44474c] mt-1">
-              Event-Driven Financial Management & Accounting for University Student Societies
+            <p className="text-xs text-slate-500 mt-0.5">
+              Role: <strong className="text-slate-700 capitalize">{user?.role?.toLowerCase().replace('_', ' ')}</strong> • Society Treasury Overview
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowExpenseModal(true)}
-              className="h-10 px-4 bg-[#0e1c2f] hover:bg-[#1a2d47] text-white rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors shadow-xs"
+              onClick={() => setShowAddTx(true)}
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-base">add</span>
-              <span>+ Submit Expense</span>
+              <Plus className="w-4 h-4" />
+              <span>Add Transaction</span>
             </button>
             <button
-              onClick={() => setShowIncomeModal(true)}
-              className="h-10 px-4 bg-[#eff4ff] hover:bg-[#dce9ff] text-[#0b1c30] rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors border border-[#c5c6cd]/20"
+              onClick={() => setShowAddEvent(true)}
+              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-base text-[#426086]">south_west</span>
-              <span>+ Record Income</span>
+              <Calendar className="w-4 h-4 text-slate-500" />
+              <span>Add Event</span>
             </button>
           </div>
-        </section>
+        </div>
 
-        {/* 4 Clean Metric Strip */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {/* Card 1: Operating Reserve */}
-          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#44474c] uppercase tracking-wider">
-                Operating Reserve
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#eff4ff] flex items-center justify-center text-[#0e1c2f]">
-                <span className="material-symbols-outlined text-base">account_balance</span>
+        {/* 3 Simple Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+              <span>Current Balance</span>
+              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <Wallet className="w-4 h-4" />
               </div>
             </div>
-            <div className="my-3">
-              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                Rs. 485,250.00
-              </div>
-              <div className="text-xs text-[#44474c] mt-1">Society treasury account</div>
+            <div className="text-2xl font-bold text-slate-900 font-mono">
+              Rs. {balance.toLocaleString('en-US')}.00
             </div>
-            <div className="pt-2 border-t border-[#c5c6cd]/20 flex justify-between text-[11px] font-['JetBrains_Mono'] text-[#426086]">
-              <span>Bank A/C: LKR 460k</span>
-              <span>Petty Cash: LKR 25k</span>
-            </div>
+            <p className="text-[11px] text-slate-400">Total available society funds</p>
           </div>
 
-          {/* Card 2: Total Income */}
-          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#44474c] uppercase tracking-wider">
-                Total Inflow (Income)
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#10B981]/10 flex items-center justify-center text-[#10B981]">
-                <span className="material-symbols-outlined text-base">south_west</span>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+              <span>Total Income</span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <ArrowDownLeft className="w-4 h-4" />
               </div>
             </div>
-            <div className="my-3">
-              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                Rs. 1,245,000.00
-              </div>
-              <div className="text-xs text-[#10B981] font-semibold mt-1">✓ Sponsorships & Member Dues</div>
+            <div className="text-2xl font-bold text-emerald-600 font-mono">
+              + Rs. {totalIncome.toLocaleString('en-US')}.00
             </div>
-            <div className="pt-2 border-t border-[#c5c6cd]/20 text-[11px] font-['JetBrains_Mono'] text-[#44474c]">
-              12 Deposits Recorded
-            </div>
+            <p className="text-[11px] text-slate-400">Sponsorships & member dues</p>
           </div>
 
-          {/* Card 3: Total Expenses */}
-          <div className="bg-white p-5 rounded-xl shadow-xs border border-[#c5c6cd]/30 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#44474c] uppercase tracking-wider">
-                Total Outflow (Expenses)
-              </span>
-              <div className="w-8 h-8 rounded-lg bg-[#ba1a1a]/10 flex items-center justify-center text-[#ba1a1a]">
-                <span className="material-symbols-outlined text-base">north_east</span>
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+            <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
+              <span>Total Expenses</span>
+              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <ArrowUpRight className="w-4 h-4" />
               </div>
             </div>
-            <div className="my-3">
-              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30] tracking-tight">
-                Rs. 759,750.00
-              </div>
-              <div className="text-xs text-[#44474c] mt-1">Disbursed event expenses</div>
+            <div className="text-2xl font-bold text-rose-600 font-mono">
+              - Rs. {totalExpense.toLocaleString('en-US')}.00
             </div>
-            <div className="pt-2 border-t border-[#c5c6cd]/20 text-[11px] font-['JetBrains_Mono'] text-[#44474c]">
-              24 Vouchers Cleared
-            </div>
+            <p className="text-[11px] text-slate-400">Disbursed event expenses</p>
           </div>
+        </div>
 
-          {/* Card 4: Pending Sign-offs */}
-          <div className="bg-[#ffdad6]/30 p-5 rounded-xl shadow-xs border border-[#ba1a1a]/20 flex flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#93000a] uppercase tracking-wider">
-                Pending Sign-offs
+        {/* Pending Approvals Notice if any */}
+        {pendingCount > 0 && (
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-3 text-xs text-amber-900">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                You have <strong className="font-bold">{pendingCount} pending transaction(s)</strong> awaiting approval.
               </span>
-              <span className="w-2.5 h-2.5 rounded-full bg-[#ba1a1a] animate-pulse"></span>
-            </div>
-            <div className="my-3">
-              <div className="font-['Hanken_Grotesk'] text-2xl font-bold text-[#0b1c30]">3 Requests</div>
-              <div className="text-xs font-bold text-[#93000a] mt-1">Rs. 62,500.00 Pending Release</div>
             </div>
             <Link
               href="/approvals"
-              className="w-full py-2 bg-[#0e1c2f] text-white hover:bg-[#1a2d47] rounded-lg text-xs font-semibold text-center transition-colors shadow-xs"
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg transition-colors"
             >
-              Review Approvals Queue →
+              Review Approvals →
             </Link>
           </div>
-        </section>
+        )}
 
-        {/* Recent Transactions Journal */}
-        <section className="bg-white rounded-xl shadow-xs border border-[#c5c6cd]/30 overflow-hidden">
-          <div className="p-5 border-b border-[#c5c6cd]/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-[#0b1c30]">
-                Recent Society Transactions
-              </h3>
-              <p className="text-xs text-[#44474c]">General ledger entries for active society accounts</p>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="inline-flex p-1 bg-[#eff4ff] rounded-lg text-xs">
-                {(['all', 'approved', 'pending'] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setActiveFilter(filter)}
-                    className={`px-3 py-1 font-medium rounded-md transition-colors ${
-                      activeFilter === filter
-                        ? 'bg-white text-[#0b1c30] font-bold shadow-xs'
-                        : 'text-[#44474c] hover:text-[#0b1c30]'
-                    }`}
-                  >
-                    {filter === 'all' ? 'All' : filter === 'approved' ? 'Approved' : 'Pending'}
-                  </button>
-                ))}
-              </div>
-              <Link
-                href="/transactions"
-                className="px-3.5 py-1.5 bg-[#eff4ff] hover:bg-[#dce9ff] text-[#0b1c30] text-xs font-semibold rounded-lg transition-colors"
-              >
-                View All →
-              </Link>
-            </div>
+        {/* Recent Transactions Table */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="font-bold text-sm text-slate-900">Recent Transactions</h3>
+            <Link
+              href="/transactions"
+              className="text-xs font-semibold text-blue-600 hover:underline"
+            >
+              View All Transactions →
+            </Link>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#eff4ff] text-[#44474c] uppercase font-semibold text-[10px]">
+              <thead className="bg-slate-50 text-slate-500 font-semibold text-[11px] border-b border-slate-100">
                 <tr>
-                  <th className="p-4">Reference & Date</th>
-                  <th className="p-4">Description & Event</th>
-                  <th className="p-4">Category</th>
-                  <th className="p-4 text-right">Amount (LKR)</th>
-                  <th className="p-4">Status</th>
+                  <th className="py-3 px-4">Ref</th>
+                  <th className="py-3 px-4">Title</th>
+                  <th className="py-3 px-4">Category</th>
+                  <th className="py-3 px-4">Event</th>
+                  <th className="py-3 px-4 text-right">Amount (LKR)</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#c5c6cd]/20">
-                <tr className="hover:bg-[#eff4ff]/50 transition-colors">
-                  <td className="p-4 font-['JetBrains_Mono']">
-                    <div className="font-bold text-[#0b1c30]">#TRX-2024-089</div>
-                    <div className="text-[10px] text-[#44474c]">Today, 10:24 AM</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-bold text-[#0b1c30]">Dialog Axiata Sponsorship Deposit</div>
-                    <div className="text-[11px] text-[#44474c]">Annual Tech Symposium 2024</div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#10B981]/10 text-[#10B981] font-bold text-[10px]">
-                      Sponsorship
-                    </span>
-                  </td>
-                  <td className="p-4 text-right font-['JetBrains_Mono'] font-bold text-[#10B981]">
-                    + Rs. 150,000.00
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#e5eeff] text-[#0e1c2f] font-bold text-[10px]">
-                      Cleared & Approved
-                    </span>
-                  </td>
-                </tr>
-
-                <tr className="hover:bg-[#eff4ff]/50 transition-colors bg-[#eff4ff]/30">
-                  <td className="p-4 font-['JetBrains_Mono']">
-                    <div className="font-bold text-[#0b1c30]">#TRX-2024-088</div>
-                    <div className="text-[10px] text-[#44474c]">Yesterday, 04:12 PM</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-bold text-[#0b1c30]">Stage Sound & Lights Rental</div>
-                    <div className="text-[11px] text-[#44474c]">Sonic Pro Audio (Pvt) Ltd</div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#44474c] font-bold text-[10px]">
-                      Logistics
-                    </span>
-                  </td>
-                  <td className="p-4 text-right font-['JetBrains_Mono'] font-bold text-[#ba1a1a]">
-                    - Rs. 28,500.00
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#ffdad6] text-[#93000a] font-bold text-[10px]">
-                      Pending President Sign-off
-                    </span>
-                  </td>
-                </tr>
-
-                <tr className="hover:bg-[#eff4ff]/50 transition-colors">
-                  <td className="p-4 font-['JetBrains_Mono']">
-                    <div className="font-bold text-[#0b1c30]">#TRX-2024-087</div>
-                    <div className="text-[10px] text-[#44474c]">Jun 16 • 02:00 PM</div>
-                  </td>
-                  <td className="p-4">
-                    <div className="font-bold text-[#0b1c30]">Workshop Certificates Printing</div>
-                    <div className="text-[11px] text-[#44474c]">University Press</div>
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#eff4ff] text-[#44474c] font-bold text-[10px]">
-                      Printing & Stationery
-                    </span>
-                  </td>
-                  <td className="p-4 text-right font-['JetBrains_Mono'] font-bold text-[#ba1a1a]">
-                    - Rs. 14,000.00
-                  </td>
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 rounded-full bg-[#e5eeff] text-[#0e1c2f] font-bold text-[10px]">
-                      Cleared & Approved
-                    </span>
-                  </td>
-                </tr>
+              <tbody className="divide-y divide-slate-100">
+                {transactions.map((tx) => (
+                  <tr
+                    key={tx.id}
+                    onClick={() => setSelectedTx(tx)}
+                    className="hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3 px-4 font-mono font-bold text-slate-500">#{tx.refNo}</td>
+                    <td className="py-3 px-4 font-semibold text-slate-900">{tx.title}</td>
+                    <td className="py-3 px-4 text-slate-600">{tx.category}</td>
+                    <td className="py-3 px-4 text-slate-600">{tx.event}</td>
+                    <td
+                      className={`py-3 px-4 text-right font-mono font-bold ${
+                        tx.type === 'INCOME' ? 'text-emerald-600' : 'text-slate-900'
+                      }`}
+                    >
+                      {tx.type === 'INCOME' ? '+' : '-'} Rs. {tx.amount.toLocaleString('en-US')}.00
+                    </td>
+                    <td className="py-3 px-4">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          tx.status === 'APPROVED'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : tx.status === 'PENDING'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-rose-100 text-rose-800'
+                        }`}
+                      >
+                        {tx.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedTx(tx);
+                        }}
+                        className="px-2.5 py-1 text-[11px] font-semibold text-blue-600 hover:bg-blue-50 rounded-lg"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </div>
 
-      {/* SUBMIT EXPENSE MODAL */}
-      {showExpenseModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white max-w-md w-full rounded-xl shadow-xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-[#c5c6cd]/20">
-              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-[#0b1c30]">
-                Submit Expense Claim
-              </h3>
-              <button
-                onClick={() => setShowExpenseModal(false)}
-                className="text-[#44474c] hover:text-[#0b1c30]"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleExpenseSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
-                  Expense Title / Description
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sound Equipment Rental"
-                  value={expenseTitle}
-                  onChange={(e) => setExpenseTitle(e.target.value)}
-                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
-                  Amount (LKR)
-                </label>
-                <input
-                  type="number"
-                  required
-                  placeholder="e.g. 15000"
-                  value={expenseAmount}
-                  onChange={(e) => setExpenseAmount(e.target.value)}
-                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">Category</label>
-                <select
-                  value={expenseCategory}
-                  onChange={(e) => setExpenseCategory(e.target.value)}
-                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
-                >
-                  <option value="Logistics">Logistics & Venue</option>
-                  <option value="Catering">Food & Refreshments</option>
-                  <option value="Printing">Printing & Stationery</option>
-                  <option value="Marketing">Promotions & Marketing</option>
-                  <option value="Miscellaneous">Miscellaneous</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowExpenseModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#44474c] hover:text-[#0b1c30]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-[#0e1c2f] hover:bg-[#1a2d47] text-white rounded-lg text-xs font-semibold"
-                >
-                  Submit for Sign-off
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* RECORD INCOME MODAL */}
-      {showIncomeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
-          <div className="bg-white max-w-md w-full rounded-xl shadow-xl p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3 border-[#c5c6cd]/20">
-              <h3 className="font-['Hanken_Grotesk'] text-lg font-bold text-[#0b1c30]">
-                Record Income Deposit
-              </h3>
-              <button
-                onClick={() => setShowIncomeModal(false)}
-                className="text-[#44474c] hover:text-[#0b1c30]"
-              >
-                <span className="material-symbols-outlined text-lg">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleIncomeSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
-                  Income Title / Source
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Platinum Sponsorship Deposit"
-                  value={incomeTitle}
-                  onChange={(e) => setIncomeTitle(e.target.value)}
-                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">
-                  Amount (LKR)
-                </label>
-                <input
-                  type="number"
-                  required
-                  placeholder="e.g. 50000"
-                  value={incomeAmount}
-                  onChange={(e) => setIncomeAmount(e.target.value)}
-                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-[#0b1c30] mb-1">Source Type</label>
-                <select
-                  value={incomeSource}
-                  onChange={(e) => setIncomeSource(e.target.value)}
-                  className="w-full p-2.5 bg-[#f8f9ff] border border-[#c5c6cd] rounded-lg text-xs text-[#0b1c30] focus:outline-none focus:border-[#426086]"
-                >
-                  <option value="Sponsorship">Corporate Sponsorship</option>
-                  <option value="Member Dues">Member Registration Dues</option>
-                  <option value="Ticket Sales">Event Ticket Sales</option>
-                  <option value="Faculty Grant">Faculty / University Grant</option>
-                </select>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowIncomeModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-[#44474c] hover:text-[#0b1c30]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-lg text-xs font-semibold"
-                >
-                  Record Deposit
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODALS */}
+      <AddTransactionModal
+        isOpen={showAddTx}
+        onClose={() => setShowAddTx(false)}
+        onSuccess={() => {}}
+      />
+      <AddEventModal
+        isOpen={showAddEvent}
+        onClose={() => setShowAddEvent(false)}
+        onSuccess={() => {}}
+      />
+      <TransactionDetailModal
+        transaction={selectedTx}
+        isOpen={Boolean(selectedTx)}
+        onClose={() => setSelectedTx(null)}
+        onApprove={handleApprove}
+        onReject={handleReject}
+        onDelete={handleDelete}
+      />
     </Navigation>
   );
 }

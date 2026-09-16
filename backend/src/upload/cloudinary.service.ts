@@ -8,7 +8,9 @@ export class CloudinaryService {
     try {
       const cloudinaryUrl = process.env.CLOUDINARY_URL;
       if (cloudinaryUrl) {
-        this.logger.log(`Uploading receipt file "${fileName}" to Cloudinary...`);
+        this.logger.log(
+          `Uploading receipt file "${fileName}" to Cloudinary...`,
+        );
         // Real Cloudinary upload stream integration if credentials exist
       }
     } catch (error: any) {
