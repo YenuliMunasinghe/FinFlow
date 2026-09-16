@@ -2,19 +2,9 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, ShieldCheck, Wallet, Receipt } from 'lucide-react';
-import { useAuth, Role } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { ArrowRight } from 'lucide-react';
 
 export default function Home() {
-  const { switchDemoRole } = useAuth();
-  const router = useRouter();
-
-  const handleQuickLogin = (role: Role) => {
-    switchDemoRole(role);
-    router.push('/dashboard');
-  };
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-6 relative overflow-hidden">
       {/* Light-mode Ambient Glow */}
@@ -52,59 +42,14 @@ export default function Home() {
           Easily track society income, submit expense claims, manage event budgets, and approve payments without complicated setups.
         </p>
 
-        {/* 1-Click Quick Login Elevated Card */}
-        <div className="bg-white/90 backdrop-blur-sm p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-xl shadow-slate-200/70 max-w-lg mx-auto space-y-4 text-left transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              Instant Test Login
-            </span>
-            <span className="text-[11px] font-medium text-slate-400">Click a role to enter</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            <button
-              onClick={() => handleQuickLogin(Role.PRESIDENT)}
-              className="p-3.5 rounded-xl bg-slate-50/80 hover:bg-white border border-slate-200/80 hover:border-blue-300 hover:shadow-md hover:shadow-blue-500/10 hover:-translate-y-0.5 text-left transition-all duration-200 group"
-            >
-              <div className="w-7 h-7 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center mb-2 transition-colors">
-                <ShieldCheck className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="font-bold text-xs text-slate-900">President</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Sign-offs</div>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin(Role.TREASURER)}
-              className="p-3.5 rounded-xl bg-slate-50/80 hover:bg-white border border-slate-200/80 hover:border-emerald-300 hover:shadow-md hover:shadow-emerald-500/10 hover:-translate-y-0.5 text-left transition-all duration-200 group"
-            >
-              <div className="w-7 h-7 rounded-lg bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center mb-2 transition-colors">
-                <Wallet className="w-4 h-4 text-emerald-600" />
-              </div>
-              <div className="font-bold text-xs text-slate-900">Treasurer</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Income & Ledger</div>
-            </button>
-
-            <button
-              onClick={() => handleQuickLogin(Role.COMMITTEE_MEMBER)}
-              className="p-3.5 rounded-xl bg-slate-50/80 hover:bg-white border border-slate-200/80 hover:border-indigo-300 hover:shadow-md hover:shadow-indigo-500/10 hover:-translate-y-0.5 text-left transition-all duration-200 group"
-            >
-              <div className="w-7 h-7 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center mb-2 transition-colors">
-                <Receipt className="w-4 h-4 text-indigo-600" />
-              </div>
-              <div className="font-bold text-xs text-slate-900">Member</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Submit Claims</div>
-            </button>
-          </div>
-        </div>
-
-        {/* Action Button & Subtle Feature Badges */}
+        {/* Action Button & Features */}
         <div className="space-y-6">
           <div>
             <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl shadow-lg shadow-slate-900/10 hover:shadow-xl hover:shadow-slate-900/20 hover:-translate-y-0.5 transition-all duration-200"
+              href="/login"
+              className="inline-flex items-center gap-2 px-7 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all duration-200"
             >
-              <span>Open Dashboard</span>
+              <span>Sign In to Your Society Account</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

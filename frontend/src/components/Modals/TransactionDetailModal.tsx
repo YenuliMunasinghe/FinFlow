@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Check, Trash2, XCircle } from 'lucide-react';
+import { useAuth, Role } from '@/context/AuthContext';
 
 export interface SimpleTransaction {
   id: string;
@@ -34,6 +35,9 @@ export default function TransactionDetailModal({
   onReject,
   onDelete,
 }: TransactionDetailModalProps) {
+  const { user } = useAuth();
+  const isPresident = user?.role === Role.PRESIDENT;
+
   if (!isOpen || !transaction) return null;
 
   return (
@@ -129,30 +133,40 @@ export default function TransactionDetailModal({
           )}
 
           <div className="flex items-center gap-2 ml-auto">
-            {transaction.status === 'PENDING' && onReject && (
-              <button
-                onClick={() => {
-                  onReject(transaction.id);
-                  onClose();
-                }}
-                className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold flex items-center gap-1"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Reject</span>
-              </button>
-            )}
+            {transaction.status === 'PENDING' && (
+              isPresident ? (
+                <>
+                  {onReject && (
+                    <button
+                      onClick={() => {
+                        onReject(transaction.id);
+                        onClose();
+                      }}
+                      className="px-3 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-lg text-xs font-semibold flex items-center gap-1"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>Reject</span>
+                    </button>
+                  )}
 
-            {transaction.status === 'PENDING' && onApprove && (
-              <button
-                onClick={() => {
-                  onApprove(transaction.id);
-                  onClose();
-                }}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Approve</span>
-              </button>
+                  {onApprove && (
+                    <button
+                      onClick={() => {
+                        onApprove(transaction.id);
+                        onClose();
+                      }}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Approve</span>
+                    </button>
+                  )}
+                </>
+              ) : (
+                <span className="text-[11px] font-medium text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60">
+                  President Approval Required
+                </span>
+              )
             )}
 
             <button

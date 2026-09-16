@@ -9,16 +9,20 @@ import { useToast } from '@/context/ToastContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, switchDemoRole } = useAuth();
+  const { login } = useAuth();
   const { success, error } = useToast();
 
-  const [memberId, setMemberId] = useState('EG/2021/8842');
-  const [password, setPassword] = useState('Password123!');
+  const [memberId, setMemberId] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!memberId || !password) {
+      error('Missing Credentials', 'Please enter your Member ID/Email and password.');
+      return;
+    }
     setIsLoading(true);
     try {
       await login(memberId, password);
@@ -29,13 +33,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickRole = (role: Role, defaultId: string) => {
-    setMemberId(defaultId);
-    switchDemoRole(role);
-    success('Signed in', `Authenticated as ${role.replace('_', ' ')}.`);
-    router.push('/dashboard');
   };
 
   return (
@@ -52,44 +49,6 @@ export default function LoginPage() {
             </span>
           </Link>
           <p className="text-xs text-slate-500 mt-1">Sign in to your society financial workspace</p>
-        </div>
-
-        {/* 1-Click Test Sign-ins */}
-        <div className="space-y-2">
-          <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider block text-center">
-            Quick Test Login:
-          </span>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickRole(Role.PRESIDENT, 'EG/2021/8842')}
-              className="p-2.5 rounded-xl bg-slate-50 hover:bg-blue-50 border border-slate-200 text-center transition-colors"
-            >
-              <ShieldCheck className="w-4 h-4 text-blue-600 mx-auto mb-1" />
-              <div className="font-bold text-[11px] text-slate-900">President</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickRole(Role.TREASURER, 'TR/2022/1042')}
-              className="p-2.5 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200 text-center transition-colors"
-            >
-              <Wallet className="w-4 h-4 text-emerald-600 mx-auto mb-1" />
-              <div className="font-bold text-[11px] text-slate-900">Treasurer</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickRole(Role.COMMITTEE_MEMBER, 'MEM/2023/5021')}
-              className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-center transition-colors"
-            >
-              <UserCheck className="w-4 h-4 text-indigo-600 mx-auto mb-1" />
-              <div className="font-bold text-[11px] text-slate-900">Member</div>
-            </button>
-          </div>
-        </div>
-
-        <div className="relative flex items-center justify-center">
-          <hr className="w-full border-slate-200" />
-          <span className="absolute bg-white px-3 text-[11px] text-slate-400 font-medium">or</span>
         </div>
 
         {/* Form */}
