@@ -24,7 +24,7 @@ export class RegisterDto {
 
   @IsString()
   @IsOptional()
-  memberId?: string; // Student ID (e.g. EG/2021/8842)
+  memberId?: string; // Society Member ID (e.g. SOC/2024/8842 or EG/2021/8842)
 
   @IsEnum(Role, {
     message:

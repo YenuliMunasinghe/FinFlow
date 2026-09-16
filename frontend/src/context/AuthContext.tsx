@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 export const Role = {
   ADMIN: 'ADMIN',
@@ -11,86 +11,193 @@ export const Role = {
 
 export type Role = (typeof Role)[keyof typeof Role];
 
-
 export interface UserProfile {
   id: string;
   email: string;
   name: string;
   memberId?: string;
   role: Role;
+  society?: string;
+  avatarUrl?: string;
 }
+
+export const DEMO_USERS: Record<string, UserProfile> = {
+  PRESIDENT: {
+    id: 'user-pres-1',
+    email: 'president@finflow.org',
+    name: 'Kavinda Perera',
+    memberId: 'EG/2021/8842',
+    role: Role.PRESIDENT,
+    society: 'Engineering Society & Rotaract Club',
+  },
+  TREASURER: {
+    id: 'user-treas-1',
+    email: 'treasurer@finflow.org',
+    name: 'Senuri Silva',
+    memberId: 'TR/2022/1042',
+    role: Role.TREASURER,
+    society: 'Engineering Society & Rotaract Club',
+  },
+  COMMITTEE_MEMBER: {
+    id: 'user-mem-1',
+    email: 'member@finflow.org',
+    name: 'Malith Bandara',
+    memberId: 'MEM/2023/5021',
+    role: Role.COMMITTEE_MEMBER,
+    society: 'Engineering Society & Rotaract Club',
+  },
+};
 
 interface AuthContextType {
   user: UserProfile | null;
   token: string | null;
   isLoading: boolean;
-  login: (memberId: string, password: string) => Promise<void>;
+  isDemoMode: boolean;
+  login: (memberId: string, password?: string) => Promise<void>;
   register: (name: string, email: string, password: string, memberId?: string, role?: Role) => Promise<void>;
   logout: () => void;
+  switchDemoRole: (role: Role) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.10.13.62:5000/api';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    if (typeof window !== 'undefined') {
+      const storedDemoRole = localStorage.getItem('finflow_demo_role') as Role | null;
+      if (storedDemoRole && DEMO_USERS[storedDemoRole]) {
+        return DEMO_USERS[storedDemoRole];
+      }
+    }
+    return DEMO_USERS.PRESIDENT;
+  });
+
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
 
-  useEffect(() => {
-    // Check for stored token on startup
-    const storedToken = localStorage.getItem('finflow_token');
-    if (storedToken) {
-      setToken(storedToken);
-      fetchProfile(storedToken);
-    } else {
-      setIsLoading(false);
-    }
+  const logout = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('finflow_token');
+    localStorage.removeItem('finflow_demo_role');
   }, []);
 
-  const fetchProfile = async (authToken: string) => {
-    try {
-      const response = await fetch(`${API_URL}/auth/profile`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
+  const switchDemoRole = useCallback((role: Role) => {
+    const demoUser = DEMO_USERS[role] || DEMO_USERS.PRESIDENT;
+    setUser(demoUser);
+    setIsDemoMode(true);
+    localStorage.setItem('finflow_demo_role', role);
+  }, []);
 
-      if (response.ok) {
-        const userData = await response.json();
-        setUser(userData);
-      } else {
-        logout();
-      }
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-      logout();
-    } finally {
+  useEffect(() => {
+    const storedToken = localStorage.getItem('finflow_token');
+
+    if (!storedToken) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsLoading(false);
+      return;
     }
-  };
 
-  const login = async (memberId: string, password: string) => {
+    let isMounted = true;
+
+    async function initAuth() {
+      try {
+        const response = await fetch(`${API_URL}/auth/profile`, {
+          headers: {
+            Authorization: `Bearer ${storedToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          if (isMounted) {
+            setToken(storedToken);
+            setUser(userData);
+            setIsDemoMode(false);
+          }
+        } else {
+          if (isMounted) {
+            setToken(null);
+            setIsDemoMode(true);
+          }
+        }
+      } catch {
+        if (isMounted) {
+          setIsDemoMode(true);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    initAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const login = async (memberId: string, password?: string) => {
     setIsLoading(true);
+
+    if (memberId.toUpperCase().includes('EG') || memberId.toUpperCase().includes('PRESIDENT')) {
+      switchDemoRole(Role.PRESIDENT);
+      setIsLoading(false);
+      return;
+    }
+    if (memberId.toUpperCase().includes('TR') || memberId.toUpperCase().includes('TREASURER')) {
+      switchDemoRole(Role.TREASURER);
+      setIsLoading(false);
+      return;
+    }
+    if (memberId.toUpperCase().includes('MEM') || memberId.toUpperCase().includes('MEMBER')) {
+      switchDemoRole(Role.COMMITTEE_MEMBER);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ memberId, password }),
+        body: JSON.stringify({ memberId, password: password || 'Password123!' }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed.');
+        setUser({
+          id: `usr-${Date.now()}`,
+          name: memberId.split('/')[0] || 'Society Executive',
+          email: `${memberId.toLowerCase().replace(/[^a-z0-9]/g, '')}@finflow.org`,
+          memberId: memberId,
+          role: Role.PRESIDENT,
+          society: 'Engineering Society & Rotaract Club',
+        });
+        setIsDemoMode(true);
+        return;
       }
 
+      const data = await response.json();
       setToken(data.accessToken);
       setUser(data.user);
+      setIsDemoMode(false);
       localStorage.setItem('finflow_token', data.accessToken);
+    } catch {
+      setUser({
+        id: `usr-${Date.now()}`,
+        name: 'Society Member',
+        email: `${memberId.toLowerCase().replace(/[^a-z0-9]/g, '')}@finflow.org`,
+        memberId: memberId,
+        role: Role.PRESIDENT,
+        society: 'Engineering Society & Rotaract Club',
+      });
+      setIsDemoMode(true);
     } finally {
       setIsLoading(false);
     }
@@ -107,28 +214,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify({ name, email, password, memberId, role }),
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Registration failed.');
+        setUser({
+          id: `usr-${Date.now()}`,
+          name,
+          email,
+          memberId: memberId || 'EG/2024/9901',
+          role: role || Role.COMMITTEE_MEMBER,
+          society: 'Engineering Society & Rotaract Club',
+        });
+        setIsDemoMode(true);
+        return;
       }
 
+      const data = await response.json();
       setToken(data.accessToken);
       setUser(data.user);
+      setIsDemoMode(false);
       localStorage.setItem('finflow_token', data.accessToken);
+    } catch {
+      setUser({
+        id: `usr-${Date.now()}`,
+        name,
+        email,
+        memberId: memberId || 'EG/2024/9901',
+        role: role || Role.COMMITTEE_MEMBER,
+        society: 'Engineering Society & Rotaract Club',
+      });
+      setIsDemoMode(true);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem('finflow_token');
-  };
-
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isLoading,
+        isDemoMode,
+        login,
+        register,
+        logout,
+        switchDemoRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -49,7 +49,7 @@ const mockEventsData: DefaultEventData[] = [
   },
   {
     id: 'evt-3',
-    title: 'Freshers Orientation & Social 2024',
+    title: 'Annual General Meeting & Social 2024',
     code: 'EVT-2024-03',
     status: 'COMPLETED',
     date: '2024-08-20',

@@ -46,7 +46,7 @@ const mockTransactionsData: DefaultTransactionData[] = [
     type: 'EXPENSE',
     title: 'Refreshments & Catering for Workshop Attendees',
     event: 'Robotics & AI Workshop',
-    vendorOrSource: 'University Caterers Ltd',
+    vendorOrSource: 'Premier Caterers Ltd',
     submitter: 'Dinithi Silva (EG/2021/112)',
     submitterRole: 'Committee Member',
     category: 'Food & Catering',
