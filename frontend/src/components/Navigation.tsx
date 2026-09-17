@@ -160,15 +160,6 @@ export default function Navigation({ children, pageTitle, onAddTransactionSucces
         {/* Top Header */}
         <header className="hidden md:flex h-16 bg-white border-b border-slate-200 px-8 items-center justify-between sticky top-0 z-20">
           <h1 className="text-lg font-bold text-slate-900">{pageTitle}</h1>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Transaction</span>
-            </button>
-          </div>
         </header>
 
         <main className="flex-1 p-4 md:p-8 max-w-6xl w-full mx-auto">{children}</main>
