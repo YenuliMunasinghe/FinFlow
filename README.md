@@ -44,6 +44,8 @@ Authenticate → Create Event/Budget Data → Submit Transaction → President R
 Budget Baseline Approval → Automated Variance Validation → Persistent Receipt Storage → Complete Audit Integration → Formal Ledger Support
 ```
 
+
+
 These stages describe the intended progression of FinFlow and are not yet complete end to end.
 
 ---
@@ -106,7 +108,27 @@ The following capabilities are planned or partially scaffolded and should not be
 - Multi-society support
 
 ---
+---
+## In Progress
+AI-Powered Financial Insight Generator 
 
+FinFlow is being extended with an AI-powered Financial Insight Generator to help event organizers and committee members understand financial performance without manually analyzing every budget and transaction.
+
+Planned Features:
+
+Analyze planned budgets against actual expenses.
+
+Identify overspending and significant spending patterns.
+
+Generate AI-powered financial summaries and recommendations.
+
+Display financial insights through the existing dashboard.
+
+Planned Technologies:
+
+Gemini API,Google GEn AI SDK, ZOD
+
+---
 ## Repository Structure
 
 ```text
