@@ -7,6 +7,7 @@ import { EventsModule } from './events/events.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
+import { AiInsightsModule } from './ai-insights/ai-insights.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { AuditModule } from './audit/audit.module';
     TransactionsModule,
     ReportsModule,
     AuditModule,
+    AiInsightsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
