@@ -37,7 +37,12 @@ export class GeminiNarrativeService {
   private readonly logger = new Logger(GeminiNarrativeService.name);
   private readonly client: GoogleGenAI | null;
   private readonly model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+  /** Total time budget for all attempts, from GEMINI_TIMEOUT_MS. */
   private readonly timeoutMs = this.readTimeout();
+  private readonly maxAttempts = 2;
+  private readonly retryDelayMs = 1000;
+  /** An attempt needs at least this much of the budget left to be worth starting. */
+  private readonly minAttemptMs = 1500;
   private readonly disclaimer =
     'AI-generated guidance based on recorded FinFlow data; review before making financial decisions.';
 
@@ -52,33 +57,9 @@ export class GeminiNarrativeService {
     }
 
     try {
-      const response = await this.client.interactions.create(
-        {
-          model: this.model,
-          input: this.buildPrompt(input),
-          system_instruction:
-            'You are a cautious financial-analysis assistant. Use only the supplied verified data. Never invent, recalculate, or alter amounts, percentages, statuses, or risks. Do not claim audit assurance. Keep the response concise and actionable.',
-          generation_config: {
-            temperature: 0.2,
-            max_output_tokens: 2000,
-            thinking_level: 'low',
-          },
-          response_format: {
-            type: 'text',
-            mime_type: 'application/json',
-            schema: GeminiNarrativeResponseJsonSchema,
-          },
-          store: false,
-        },
-        { timeout_ms: this.timeoutMs },
-      );
-
-      if (!response.output_text) {
-        throw new Error('Gemini returned an empty response.');
-      }
-
+      const outputText = await this.requestNarrative(input);
       const parsed = GeminiNarrativeResponseSchema.parse(
-        JSON.parse(response.output_text),
+        JSON.parse(outputText),
       );
 
       return {
@@ -93,6 +74,81 @@ export class GeminiNarrativeService {
       this.logger.warn(`Gemini narrative generation failed: ${message}`);
       return this.createFallback(input);
     }
+  }
+
+  /**
+   * Calls Gemini within a single overall deadline. The SDK's own retries are
+   * disabled: they re-send an already-consumed request body and fail with
+   * "TypeError: unusable" only after long backoffs, which turned a quick 503
+   * into a ~60 s request. Transient failures (429, 5xx, network/timeouts) get
+   * one bounded retry here instead; everything else falls back immediately.
+   */
+  private async requestNarrative(input: GeminiNarrativeInput): Promise<string> {
+    const deadline = Date.now() + this.timeoutMs;
+
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const response = await this.client!.interactions.create(
+          {
+            model: this.model,
+            input: this.buildPrompt(input),
+            system_instruction:
+              'You are a cautious financial-analysis assistant. Use only the supplied verified data. Never invent, recalculate, or alter amounts, percentages, statuses, or risks. Do not claim audit assurance. Keep the response concise and actionable.',
+            generation_config: {
+              temperature: 0.2,
+              max_output_tokens: 2000,
+              thinking_level: 'low',
+            },
+            response_format: {
+              type: 'text',
+              mime_type: 'application/json',
+              schema: GeminiNarrativeResponseJsonSchema,
+            },
+            store: false,
+          },
+          {
+            timeout_ms: Math.max(deadline - Date.now(), 1),
+            retries: { strategy: 'none' },
+          },
+        );
+
+        if (!response.output_text) {
+          throw new Error('Gemini returned an empty response.');
+        }
+
+        return response.output_text;
+      } catch (error) {
+        const timeLeft = deadline - Date.now() - this.retryDelayMs;
+        const canRetry =
+          attempt < this.maxAttempts &&
+          this.isTransient(error) &&
+          timeLeft >= this.minAttemptMs;
+
+        if (!canRetry) {
+          throw error;
+        }
+
+        this.logger.warn(
+          `Gemini attempt ${attempt} failed (${this.describeError(error)}); retrying once.`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, this.retryDelayMs));
+      }
+    }
+  }
+
+  private isTransient(error: unknown): boolean {
+    const status = (error as { status?: number })?.status;
+    if (typeof status === 'number') {
+      return status === 429 || status >= 500;
+    }
+    const name = (error as { name?: string })?.name ?? '';
+    return /timeout|abort|connection|fetch/i.test(name);
+  }
+
+  private describeError(error: unknown): string {
+    const status = (error as { status?: number })?.status;
+    const message = error instanceof Error ? error.message : String(error);
+    return status ? `${status}: ${message}` : message;
   }
 
   private buildPrompt(input: GeminiNarrativeInput): string {

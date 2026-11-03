@@ -1,5 +1,22 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
+
+/**
+ * Prisma's interactive-transaction defaults (2s to acquire a connection, 5s
+ * total) are too tight for a remote Supabase pooler: a few sequential round
+ * trips can exceed them, Prisma closes the transaction mid-request and the
+ * API returns 500 "Transaction not found". Every interactive transaction
+ * should use one of these option sets.
+ */
+export const TRANSACTION_TIMEOUTS = {
+  maxWait: 10_000,
+  timeout: 30_000,
+} as const;
+
+export const SERIALIZABLE_TRANSACTION = {
+  ...TRANSACTION_TIMEOUTS,
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+};
 
 @Injectable()
 export class PrismaService

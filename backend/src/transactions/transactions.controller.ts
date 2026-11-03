@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { ResubmitTransactionDto } from './dto/resubmit-transaction.dto';
 import { CloudinaryService } from '../upload/cloudinary.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -43,8 +44,16 @@ export class TransactionsController {
 
   @Post()
   async create(@Request() req: any, @Body() createDto: CreateTransactionDto) {
-    const userId = req.user?.id || req.user?.userId || 'guest-user';
-    return this.transactionsService.create(userId, createDto);
+    return this.transactionsService.create(req.user.id, createDto);
+  }
+
+  @Patch(':id/resubmit')
+  async resubmit(
+    @Param('id') id: string,
+    @Request() req: any,
+    @Body() resubmitDto: ResubmitTransactionDto,
+  ) {
+    return this.transactionsService.resubmit(req.user.id, id, resubmitDto);
   }
 
   @Post('upload-receipt')
@@ -64,8 +73,7 @@ export class TransactionsController {
   @UseGuards(RolesGuard)
   @Roles(Role.PRESIDENT)
   async approve(@Param('id') id: string, @Request() req: any) {
-    const approverId = req.user?.id || req.user?.userId;
-    return this.transactionsService.approveTransaction(id, approverId);
+    return this.transactionsService.approveTransaction(id, req.user.id);
   }
 
   @Patch(':id/reject')

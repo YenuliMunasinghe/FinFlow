@@ -6,7 +6,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  PrismaService,
+  SERIALIZABLE_TRANSACTION,
+  TRANSACTION_TIMEOUTS,
+} from '../prisma/prisma.service';
 import { CreateBudgetItemDto } from './dto/create-budget-item.dto';
 import { UpdateBudgetItemDto } from './dto/update-budget-item.dto';
 
@@ -93,7 +97,7 @@ export class BudgetItemsService {
 
         return this.toResponse(item);
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      SERIALIZABLE_TRANSACTION,
     );
   }
 
@@ -214,7 +218,7 @@ export class BudgetItemsService {
 
         return this.toResponse(item);
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      SERIALIZABLE_TRANSACTION,
     );
   }
 
@@ -246,7 +250,7 @@ export class BudgetItemsService {
       await transaction.budgetItem.delete({ where: { id: budgetItemId } });
 
       return { message: 'Budget item deleted successfully.', id: budgetItemId };
-    });
+    }, TRANSACTION_TIMEOUTS);
   }
 
   private ensureDatabaseAvailable() {

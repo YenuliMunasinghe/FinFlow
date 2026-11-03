@@ -36,6 +36,33 @@ describe('FinancialAnalysisService', () => {
     expect(result.alerts).toEqual([]);
   });
 
+  it('counts only approved and pending transactions; rejected and revision-requested are excluded', () => {
+    const result = service.analyze({
+      allocatedBudget: 10000,
+      budgetCategories: [{ category: 'Venue', allocatedBudget: 10000 }],
+      transactions: (
+        ['APPROVED', 'PENDING', 'REJECTED', 'REVISION_REQUESTED'] as const
+      ).flatMap((status) => [
+        { amount: 1000, type: 'INCOME' as const, status },
+        { amount: 2000, type: 'EXPENSE' as const, status, category: 'Venue' },
+      ]),
+    });
+
+    expect(result.metrics).toEqual(
+      expect.objectContaining({
+        approvedIncome: 1000,
+        pendingIncome: 1000,
+        approvedExpenses: 2000,
+        pendingExpenses: 2000,
+        projectedExpenses: 4000,
+        netCashFlow: -1000,
+      }),
+    );
+    expect(result.categoryBreakdown[0]).toEqual(
+      expect.objectContaining({ approvedExpenses: 2000, pendingExpenses: 2000 }),
+    );
+  });
+
   it('warns when approved spending is near the budget limit', () => {
     const result = service.analyze({
       allocatedBudget: 100000,

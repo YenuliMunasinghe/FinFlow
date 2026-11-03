@@ -85,6 +85,70 @@ describe('GeminiNarrativeService', () => {
     );
   });
 
+  const withClient = (createInteraction: jest.Mock) => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    const service = new GeminiNarrativeService();
+    (
+      service as unknown as {
+        client: { interactions: { create: jest.Mock } };
+      }
+    ).client = { interactions: { create: createInteraction } };
+    return service;
+  };
+
+  const validOutput = {
+    output_text: JSON.stringify({
+      summary: 'Spending is approaching the approved event budget.',
+      keyFindings: ['Budget utilization is 92%.'],
+      recommendations: [],
+    }),
+  };
+
+  it('disables SDK retries and retries a transient 503 once', async () => {
+    const overloaded = Object.assign(new Error('503 high demand'), {
+      status: 503,
+    });
+    const createInteraction = jest
+      .fn()
+      .mockRejectedValueOnce(overloaded)
+      .mockResolvedValueOnce(validOutput);
+    const service = withClient(createInteraction);
+
+    const result = await service.generate(input);
+
+    expect(result.source).toBe('gemini');
+    expect(createInteraction).toHaveBeenCalledTimes(2);
+    expect(createInteraction.mock.calls[0][1]).toEqual(
+      expect.objectContaining({ retries: { strategy: 'none' } }),
+    );
+  });
+
+  it('falls back after a second transient failure without further retries', async () => {
+    const overloaded = Object.assign(new Error('503 high demand'), {
+      status: 503,
+    });
+    const createInteraction = jest.fn().mockRejectedValue(overloaded);
+    const service = withClient(createInteraction);
+
+    const result = await service.generate(input);
+
+    expect(result.source).toBe('deterministic-fallback');
+    expect(createInteraction).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry non-transient errors such as a bad API key', async () => {
+    const badKey = Object.assign(new Error('400 API key not valid'), {
+      status: 400,
+    });
+    const createInteraction = jest.fn().mockRejectedValue(badKey);
+    const service = withClient(createInteraction);
+
+    const result = await service.generate(input);
+
+    expect(result.source).toBe('deterministic-fallback');
+    expect(createInteraction).toHaveBeenCalledTimes(1);
+  });
+
   it('falls back when Gemini returns data rejected by Zod', async () => {
     process.env.GEMINI_API_KEY = 'test-key';
     const service = new GeminiNarrativeService();
