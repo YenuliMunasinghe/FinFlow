@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -23,7 +31,7 @@ export class EventsController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles(Role.TREASURER, Role.PRESIDENT, Role.ADMIN)
-  async create(@Body() createEventDto: CreateEventDto) {
-    return this.eventsService.create(createEventDto);
+  async create(@Request() req: any, @Body() createEventDto: CreateEventDto) {
+    return this.eventsService.create(req.user.id, createEventDto);
   }
 }

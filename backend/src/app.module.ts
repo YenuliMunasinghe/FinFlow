@@ -8,6 +8,7 @@ import { TransactionsModule } from './transactions/transactions.module';
 import { ReportsModule } from './reports/reports.module';
 import { AuditModule } from './audit/audit.module';
 import { AiInsightsModule } from './ai-insights/ai-insights.module';
+import { BudgetItemsModule } from './budget-items/budget-items.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { AiInsightsModule } from './ai-insights/ai-insights.module';
     ReportsModule,
     AuditModule,
     AiInsightsModule,
+    BudgetItemsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
