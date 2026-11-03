@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, INestApplication } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
+import { configureApp } from './app.setup';
 import { ExpressAdapter } from '@nestjs/platform-express';
 import express, { Express } from 'express';
 
@@ -14,26 +15,7 @@ export async function createApp(expressInstance: Express): Promise<INestApplicat
       new ExpressAdapter(expressInstance),
     );
 
-    // Enable CORS for all domains (Vercel, LAN, and Localhost)
-    app.enableCors({
-      origin: (origin, callback) => {
-        // Allow all origins for API access
-        callback(null, true);
-      },
-      credentials: true,
-    });
-
-    // Global prefix for all REST endpoints: /api/...
-    app.setGlobalPrefix('api');
-
-    // Automatically validate and transform request payloads (DTOs)
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
+    configureApp(app);
 
     await app.init();
     cachedApp = app;

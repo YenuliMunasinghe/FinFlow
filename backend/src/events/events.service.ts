@@ -6,7 +6,10 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  PrismaService,
+  SERIALIZABLE_TRANSACTION,
+} from '../prisma/prisma.service';
 import { BudgetItemsService } from '../budget-items/budget-items.service';
 import { CreateEventDto } from './dto/create-event.dto';
 
@@ -188,7 +191,7 @@ export class EventsService {
           include: eventWithBudgetInclude,
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      SERIALIZABLE_TRANSACTION,
     );
 
     return this.toResponse(created);
