@@ -1,5 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { BudgetItemsService } from '../budget-items/budget-items.service';
 import { CreateEventDto } from './dto/create-event.dto';
 
 export interface DefaultEventData {
@@ -8,7 +16,10 @@ export interface DefaultEventData {
   code: string;
   status: 'ACTIVE' | 'UPCOMING' | 'COMPLETED';
   date: string;
+  venue?: string | null;
   allocated: number;
+  totalAllocated?: number;
+  unallocated?: number;
   spent: number;
   categories: {
     name: string;
@@ -63,49 +74,39 @@ const mockEventsData: DefaultEventData[] = [
   },
 ];
 
+const eventWithBudgetInclude = {
+  budgetItems: {
+    include: { category: true },
+    orderBy: { createdAt: 'asc' },
+  },
+} satisfies Prisma.EventInclude;
+
+type EventWithBudget = Prisma.EventGetPayload<{
+  include: typeof eventWithBudgetInclude;
+}>;
+
 @Injectable()
 export class EventsService {
   private readonly logger = new Logger(EventsService.name);
   private localEventsStore: DefaultEventData[] = [...mockEventsData];
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly budgetItemsService: BudgetItemsService,
+  ) {}
 
   async findAll() {
     try {
       if (this.prisma.isDbAvailable()) {
         const events = await this.prisma.event.findMany({
-          include: {
-            budgetItems: {
-              include: {
-                category: true,
-              },
-            },
-          },
+          include: eventWithBudgetInclude,
           orderBy: {
             createdAt: 'desc',
           },
         });
 
         if (events && events.length > 0) {
-          return events.map((e) => ({
-            id: e.id,
-            title: e.name,
-            code: `EVT-${e.id.slice(0, 6).toUpperCase()}`,
-            status:
-              e.status === 'DRAFT' || e.status === 'APPROVED'
-                ? 'ACTIVE'
-                : (e.status as any),
-            date: e.startDate
-              ? e.startDate.toISOString().split('T')[0]
-              : '2024-10-15',
-            allocated: Number(e.totalBudget),
-            spent: 0,
-            categories: e.budgetItems.map((b) => ({
-              name: b.category ? b.category.name : b.itemName,
-              allocated: Number(b.allocatedAmount),
-              spent: 0,
-            })),
-          }));
+          return events.map((e) => this.toResponse(e));
         }
       }
     } catch (error) {
@@ -122,35 +123,11 @@ export class EventsService {
       if (this.prisma.isDbAvailable()) {
         const event = await this.prisma.event.findUnique({
           where: { id },
-          include: {
-            budgetItems: {
-              include: {
-                category: true,
-              },
-            },
-          },
+          include: eventWithBudgetInclude,
         });
 
         if (event) {
-          return {
-            id: event.id,
-            title: event.name,
-            code: `EVT-${event.id.slice(0, 6).toUpperCase()}`,
-            status:
-              event.status === 'DRAFT' || event.status === 'APPROVED'
-                ? 'ACTIVE'
-                : (event.status as any),
-            date: event.startDate
-              ? event.startDate.toISOString().split('T')[0]
-              : '2024-10-15',
-            allocated: Number(event.totalBudget),
-            spent: 0,
-            categories: event.budgetItems.map((b) => ({
-              name: b.category ? b.category.name : b.itemName,
-              allocated: Number(b.allocatedAmount),
-              spent: 0,
-            })),
-          };
+          return this.toResponse(event);
         }
       }
     } catch (error) {
@@ -164,78 +141,97 @@ export class EventsService {
     return found;
   }
 
-  async create(createEventDto: CreateEventDto) {
-    const { title, description, startDate, endDate, totalBudget } =
-      createEventDto;
-
-    try {
-      if (this.prisma.isDbAvailable()) {
-        const defaultUser = await this.prisma.user.findFirst();
-        if (defaultUser) {
-          const createdEvent = await this.prisma.event.create({
-            data: {
-              name: title,
-              description: description || title,
-              startDate: new Date(startDate),
-              endDate: endDate ? new Date(endDate) : new Date(startDate),
-              totalBudget: Number(totalBudget),
-              status: 'APPROVED',
-              managedById: defaultUser.id,
-            },
-          });
-
-          return {
-            id: createdEvent.id,
-            title: createdEvent.name,
-            code: `EVT-${createdEvent.id.slice(0, 6).toUpperCase()}`,
-            status: 'ACTIVE' as const,
-            date: createdEvent.startDate.toISOString().split('T')[0],
-            allocated: Number(createdEvent.totalBudget),
-            spent: 0,
-            categories: [
-              {
-                name: 'Logistics & Venue',
-                allocated: Number(totalBudget) * 0.5,
-                spent: 0,
-              },
-              {
-                name: 'Marketing & Catering',
-                allocated: Number(totalBudget) * 0.5,
-                spent: 0,
-              },
-            ],
-          };
-        }
-      }
-    } catch (error) {
-      this.logger.warn(
-        `Database create failed, using local store: ${error.message}`,
+  /**
+   * Persists an event and (optionally) its initial budget items atomically.
+   * Creation requires the database: there is no in-memory fallback, so a
+   * successful response always means the budget was actually stored.
+   */
+  async create(managedById: string, dto: CreateEventDto) {
+    if (!this.prisma.isDbAvailable()) {
+      throw new ServiceUnavailableException(
+        'Events cannot be created while the database is unavailable.',
       );
     }
 
-    const newLocalEvent: DefaultEventData = {
-      id: `evt-${Date.now()}`,
-      title,
-      code: `EVT-2024-${String(this.localEventsStore.length + 1).padStart(2, '0')}`,
-      status: 'ACTIVE',
-      date: startDate || new Date().toISOString().split('T')[0],
-      allocated: Number(totalBudget),
-      spent: 0,
-      categories: [
-        {
-          name: 'Logistics & Venue',
-          allocated: Number(totalBudget) * 0.5,
-          spent: 0,
-        },
-        {
-          name: 'Marketing & Catering',
-          allocated: Number(totalBudget) * 0.5,
-          spent: 0,
-        },
-      ],
-    };
+    const startDate = new Date(dto.startDate);
+    const endDate = dto.endDate ? new Date(dto.endDate) : startDate;
 
-    this.localEventsStore.unshift(newLocalEvent);
-    return newLocalEvent;
+    if (endDate < startDate) {
+      throw new BadRequestException('End date cannot be before start date.');
+    }
+
+    const created = await this.prisma.$transaction(
+      async (transaction) => {
+        const event = await transaction.event.create({
+          data: {
+            name: dto.title.trim(),
+            description: dto.description?.trim() || null,
+            venue: dto.venue?.trim() || null,
+            startDate,
+            endDate,
+            totalBudget: dto.totalBudget.toFixed(2),
+            status: 'APPROVED',
+            managedById,
+          },
+          select: { id: true },
+        });
+
+        await this.budgetItemsService.createInitialItems(
+          transaction,
+          event.id,
+          dto.totalBudget,
+          dto.budgetItems ?? [],
+        );
+
+        return transaction.event.findUniqueOrThrow({
+          where: { id: event.id },
+          include: eventWithBudgetInclude,
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    return this.toResponse(created);
+  }
+
+  private toResponse(event: EventWithBudget): DefaultEventData {
+    const allocatedCents = Math.round(Number(event.totalBudget) * 100);
+    const totalAllocatedCents = event.budgetItems.reduce(
+      (sum, item) => sum + Math.round(Number(item.allocatedAmount) * 100),
+      0,
+    );
+
+    // Group budget items by category so the shape matches the existing
+    // `categories` contract used by the frontend.
+    const byCategory = new Map<string, number>();
+    for (const item of event.budgetItems) {
+      const name = item.category?.name ?? item.itemName;
+      byCategory.set(
+        name,
+        (byCategory.get(name) ?? 0) +
+          Math.round(Number(item.allocatedAmount) * 100),
+      );
+    }
+
+    return {
+      id: event.id,
+      title: event.name,
+      code: `EVT-${event.id.slice(0, 6).toUpperCase()}`,
+      status:
+        event.status === 'DRAFT' || event.status === 'APPROVED'
+          ? 'ACTIVE'
+          : (event.status as DefaultEventData['status']),
+      date: event.startDate.toISOString().split('T')[0],
+      venue: event.venue,
+      allocated: allocatedCents / 100,
+      totalAllocated: totalAllocatedCents / 100,
+      unallocated: (allocatedCents - totalAllocatedCents) / 100,
+      spent: 0,
+      categories: Array.from(byCategory, ([name, cents]) => ({
+        name,
+        allocated: cents / 100,
+        spent: 0,
+      })),
+    };
   }
 }
