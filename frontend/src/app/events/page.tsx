@@ -1,68 +1,56 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { AlertTriangle, Calendar, ChevronRight, MapPin, Plus, RefreshCw } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import AddEventModal from '@/components/Modals/AddEventModal';
-import { Plus, Calendar, MapPin, Trash2 } from 'lucide-react';
-import { useToast } from '@/context/ToastContext';
-
-interface EventItem {
-  id: string;
-  name: string;
-  code: string;
-  date: string;
-  venue?: string;
-  totalBudget: number;
-  spent: number;
-}
-
-const INITIAL_EVENTS: EventItem[] = [
-  {
-    id: 'evt-1',
-    name: 'Annual Tech Symposium 2024',
-    code: 'ATS-24',
-    date: 'Oct 15, 2024',
-    venue: 'Main Auditorium',
-    totalBudget: 450000,
-    spent: 312500,
-  },
-  {
-    id: 'evt-2',
-    name: 'Inter-University Hackathon 2024',
-    code: 'HACK-24',
-    date: 'Nov 02, 2024',
-    venue: 'Computing Complex Lab 3',
-    totalBudget: 350000,
-    spent: 248750,
-  },
-  {
-    id: 'evt-3',
-    name: 'STEM Charity & Schools Outreach Drive',
-    code: 'CHARITY-24',
-    date: 'Dec 10, 2024',
-    venue: 'Central Province School Hall',
-    totalBudget: 200000,
-    spent: 45000,
-  },
-  {
-    id: 'evt-4',
-    name: 'General Society Administration',
-    code: 'ADMIN-24',
-    date: 'Year-Round 2024',
-    venue: 'Society Office',
-    totalBudget: 120000,
-    spent: 65000,
-  },
-];
+import { canManageBudgets, useAuth } from '@/context/AuthContext';
+import { ApiError, EventSummary, listEvents } from '@/lib/api';
+import { formatEventDate, formatMoney } from '@/lib/format';
 
 export default function EventsPage() {
-  const { success } = useToast();
-  const [events, setEvents] = useState<EventItem[]>(INITIAL_EVENTS);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const router = useRouter();
+  const { token, user, logout } = useAuth();
+  const canManage = canManageBudgets(user?.role);
 
-  const handleDeleteEvent = (id: string, name: string) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-    success('Event Deleted', `"${name}" removed.`);
+  const [events, setEvents] = useState<EventSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [reloadCount, setReloadCount] = useState(0);
+
+  useEffect(() => {
+    if (!token) return;
+    let isCurrent = true;
+
+    listEvents(token)
+      .then((result) => {
+        if (!isCurrent) return;
+        setEvents(result);
+        setLoadError(null);
+        setIsLoading(false);
+      })
+      .catch((err: Error) => {
+        if (!isCurrent) return;
+        if (err instanceof ApiError && err.status === 401) {
+          logout();
+          return;
+        }
+        setLoadError(err.message);
+        setIsLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [token, logout, reloadCount]);
+
+  const handleRetry = () => {
+    setIsLoading(true);
+    setLoadError(null);
+    setReloadCount((count) => count + 1);
   };
 
   return (
@@ -73,96 +61,116 @@ export default function EventsPage() {
           <div>
             <h2 className="text-xl font-bold text-slate-900">Society Events & Budgets</h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Track project budgets, date schedules, and total spending.
+              Open an event to manage its budget items and see how much is allocated.
             </p>
           </div>
 
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Event</span>
-          </button>
+          {canManage && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Event</span>
+            </button>
+          )}
         </div>
 
-        {/* Events Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {events.map((evt) => {
-            const pct = evt.totalBudget > 0 ? Math.round((evt.spent / evt.totalBudget) * 100) : 0;
-            const remaining = evt.totalBudget - evt.spent;
+        {isLoading ? (
+          <div role="status" className="py-20 flex flex-col items-center gap-3">
+            <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs text-slate-500 font-medium">Loading events...</span>
+          </div>
+        ) : loadError ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs px-6 py-12 text-center">
+            <AlertTriangle className="w-6 h-6 text-amber-500 mx-auto" />
+            <p className="text-sm font-semibold text-slate-800 mt-3">Events could not be loaded</p>
+            <p className="text-xs text-slate-500 mt-1">{loadError}</p>
+            <button
+              onClick={handleRetry}
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Try Again</span>
+            </button>
+          </div>
+        ) : events.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs px-6 py-12 text-center">
+            <p className="text-sm font-semibold text-slate-700">No events yet</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {canManage ? 'Add an event to start planning its budget.' : 'Events will appear here once they are added.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {events.map((evt) => {
+              const { totalAllocated, unallocated } = evt;
+              // Rounded down so a budget with money left never reads as 100%.
+              const pct = evt.allocated > 0 ? Math.floor((totalAllocated / evt.allocated) * 100) : 0;
 
-            return (
-              <div
-                key={evt.id}
-                className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-4"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-bold text-blue-600">#{evt.code}</span>
-                    <button
-                      onClick={() => handleDeleteEvent(evt.id, evt.name)}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded"
-                      title="Delete Event"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+              return (
+                <Link
+                  key={evt.id}
+                  href={`/events/${evt.id}`}
+                  className="group bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col justify-between space-y-4 hover:border-blue-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-bold text-blue-600">#{evt.code}</span>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                    </div>
 
-                  <div>
-                    <h3 className="font-bold text-base text-slate-900">{evt.name}</h3>
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{evt.date}</span>
-                      </span>
-                      {evt.venue && (
+                    <div>
+                      <h3 className="font-bold text-base text-slate-900">{evt.title}</h3>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 mt-1">
                         <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{evt.venue}</span>
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{formatEventDate(evt.date)}</span>
                         </span>
-                      )}
+                        {evt.venue && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                            <span>{evt.venue}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Allocation Progress */}
+                    <div className="space-y-1.5 pt-2">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span className="text-slate-700">Budget Allocated</span>
+                        <span className="font-mono font-bold text-slate-900">{pct}%</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-blue-600 transition-all"
+                          style={{ width: `${Math.min(100, pct)}%` }}
+                        />
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-x-3 text-[11px] font-mono text-slate-500">
+                        <span>Allocated: {formatMoney(totalAllocated)}</span>
+                        <span>Budget: {formatMoney(evt.allocated)}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Progress Bar */}
-                  <div className="space-y-1.5 pt-2">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-slate-700">Budget Spent</span>
-                      <span className="font-mono font-bold text-slate-900">{pct}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          pct >= 90 ? 'bg-rose-500' : 'bg-blue-600'
-                        }`}
-                        style={{ width: `${Math.min(100, pct)}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[11px] font-mono text-slate-500">
-                      <span>Spent: Rs. {evt.spent.toLocaleString('en-US')}</span>
-                      <span>Budget: Rs. {evt.totalBudget.toLocaleString('en-US')}</span>
-                    </div>
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
+                    <span className="text-slate-500">Remaining Unallocated:</span>
+                    <span className="font-mono font-bold text-emerald-600">{formatMoney(unallocated)}</span>
                   </div>
-                </div>
-
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Remaining Balance:</span>
-                  <span className="font-mono font-bold text-emerald-600">
-                    Rs. {remaining.toLocaleString('en-US')}.00
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* MODAL */}
       <AddEventModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSuccess={() => {}}
+        onSuccess={(event) => router.push(`/events/${event.id}`)}
       />
     </Navigation>
   );
