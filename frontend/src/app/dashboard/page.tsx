@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Navigation from '@/components/Navigation';
-import { useAuth } from '@/context/AuthContext';
+import { canManageBudgets, useAuth } from '@/context/AuthContext';
 import {
   Wallet,
   ArrowDownLeft,
@@ -142,13 +142,15 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4" />
               <span>Add Transaction</span>
             </button>
-            <button
-              onClick={() => setShowAddEvent(true)}
-              className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5"
-            >
-              <Calendar className="w-4 h-4 text-slate-500" />
-              <span>Add Event</span>
-            </button>
+            {canManageBudgets(user?.role) && (
+              <button
+                onClick={() => setShowAddEvent(true)}
+                className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+              >
+                <Calendar className="w-4 h-4 text-slate-500" />
+                <span>Add Event</span>
+              </button>
+            )}
           </div>
         </div>
 

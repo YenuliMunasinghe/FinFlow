@@ -3,7 +3,8 @@ import { AppModule } from './app.module';
 import { INestApplication } from '@nestjs/common';
 import { configureApp } from './app.setup';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import express, { Express } from 'express';
+import express = require('express');
+import { Express } from 'express';
 
 export const server: Express = express();
 let cachedApp: INestApplication;

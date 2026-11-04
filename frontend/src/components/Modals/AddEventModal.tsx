@@ -2,15 +2,19 @@
 
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
+import { ApiError, createEvent, EventSummary } from '@/lib/api';
+import { formatMoney } from '@/lib/format';
 
 interface AddEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  onSuccess?: (event: EventSummary) => void;
 }
 
 export default function AddEventModal({ isOpen, onClose, onSuccess }: AddEventModalProps) {
+  const { token, logout } = useAuth();
   const { success, error } = useToast();
 
   const [name, setName] = useState('');
@@ -23,23 +27,32 @@ export default function AddEventModal({ isOpen, onClose, onSuccess }: AddEventMo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !budget || Number(budget) <= 0) {
-      error('Please provide an event name and total budget.');
+    if (!name.trim() || !/^\d+(\.\d{1,2})?$/.test(budget) || Number(budget) <= 0) {
+      error('Invalid Event', 'Enter an event name and a total budget above zero, with up to 2 decimal places.');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      success('Event Created', `"${name}" with budget Rs. ${Number(budget).toLocaleString('en-US')} created.`);
+      const created = await createEvent(token, {
+        title: name.trim(),
+        startDate: date,
+        totalBudget: Number(budget),
+        ...(venue.trim() && { venue: venue.trim() }),
+      });
+      success('Event Created', `"${created.title}" with budget ${formatMoney(created.allocated)} created.`);
       setName('');
       setBudget('');
       setDate('');
       setVenue('');
       onClose();
-      if (onSuccess) onSuccess();
-    } catch {
-      error('Failed to create event.');
+      if (onSuccess) onSuccess(created);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout();
+        return;
+      }
+      error('Failed to Create Event', err instanceof Error ? err.message : undefined);
     } finally {
       setIsSubmitting(false);
     }
@@ -76,7 +89,8 @@ export default function AddEventModal({ isOpen, onClose, onSuccess }: AddEventMo
               <input
                 type="number"
                 required
-                min="1"
+                min="0.01"
+                step="0.01"
                 placeholder="e.g. 250000"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}

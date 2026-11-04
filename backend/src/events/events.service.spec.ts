@@ -175,3 +175,46 @@ describe('EventsService.create', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 });
+
+describe('EventsService reads', () => {
+  const prisma = {
+    isDbAvailable: jest.fn(),
+    event: { findMany: jest.fn(), findUnique: jest.fn() },
+  };
+
+  let service: EventsService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prisma.isDbAvailable.mockReturnValue(true);
+    service = new EventsService(
+      prisma as unknown as PrismaService,
+      {} as BudgetItemsService,
+    );
+  });
+
+  it('returns an empty list when there are no events, not sample data', async () => {
+    prisma.event.findMany.mockResolvedValue([]);
+
+    await expect(service.findAll()).resolves.toEqual([]);
+  });
+
+  it('returns 404 for an unknown event, including old sample IDs', async () => {
+    prisma.event.findUnique.mockResolvedValue(null);
+
+    await expect(service.findOne('evt-1')).rejects.toThrow(NotFoundException);
+  });
+
+  it('returns 503 for reads when the database is unavailable', async () => {
+    prisma.isDbAvailable.mockReturnValue(false);
+
+    await expect(service.findAll()).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    await expect(service.findOne('any-id')).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+    expect(prisma.event.findMany).not.toHaveBeenCalled();
+    expect(prisma.event.findUnique).not.toHaveBeenCalled();
+  });
+});

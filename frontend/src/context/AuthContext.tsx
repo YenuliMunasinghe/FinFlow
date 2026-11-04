@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { API_URL } from '@/lib/api';
 
 export const Role = {
   ADMIN: 'ADMIN',
@@ -10,6 +11,10 @@ export const Role = {
 } as const;
 
 export type Role = (typeof Role)[keyof typeof Role];
+
+/** Mirrors the backend's @Roles guard on event and budget-item changes. */
+export const canManageBudgets = (role?: Role) =>
+  role === Role.ADMIN || role === Role.PRESIDENT || role === Role.TREASURER;
 
 export interface UserProfile {
   id: string;
@@ -33,8 +38,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://10.10.13.62:5000/api';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(() => {

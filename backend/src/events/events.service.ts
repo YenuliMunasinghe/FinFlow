@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   Injectable,
-  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -21,8 +20,8 @@ export interface DefaultEventData {
   date: string;
   venue?: string | null;
   allocated: number;
-  totalAllocated?: number;
-  unallocated?: number;
+  totalAllocated: number;
+  unallocated: number;
   spent: number;
   categories: {
     name: string;
@@ -30,52 +29,6 @@ export interface DefaultEventData {
     spent: number;
   }[];
 }
-
-const mockEventsData: DefaultEventData[] = [
-  {
-    id: 'evt-1',
-    title: 'Annual Tech Symposium 2024',
-    code: 'EVT-2024-01',
-    status: 'ACTIVE',
-    date: '2024-10-15',
-    allocated: 450000,
-    spent: 278500,
-    categories: [
-      { name: 'Logistics & Venue', allocated: 200000, spent: 150000 },
-      { name: 'Audio/Visual Hire', allocated: 100000, spent: 78500 },
-      { name: 'Food & Refreshments', allocated: 100000, spent: 35000 },
-      { name: 'Certificates & Printing', allocated: 50000, spent: 15000 },
-    ],
-  },
-  {
-    id: 'evt-2',
-    title: 'Robotics & AI Hands-on Workshop',
-    code: 'EVT-2024-02',
-    status: 'ACTIVE',
-    date: '2024-11-02',
-    allocated: 120000,
-    spent: 42000,
-    categories: [
-      { name: 'Hardware Kits', allocated: 70000, spent: 28000 },
-      { name: 'Refreshments', allocated: 30000, spent: 14000 },
-      { name: 'Certificates & Banners', allocated: 20000, spent: 0 },
-    ],
-  },
-  {
-    id: 'evt-3',
-    title: 'Annual General Meeting & Social 2024',
-    code: 'EVT-2024-03',
-    status: 'COMPLETED',
-    date: '2024-08-20',
-    allocated: 180000,
-    spent: 175000,
-    categories: [
-      { name: 'Food & Catering', allocated: 120000, spent: 120000 },
-      { name: 'Sound System', allocated: 40000, spent: 38000 },
-      { name: 'Decorations', allocated: 20000, spent: 17000 },
-    ],
-  },
-];
 
 const eventWithBudgetInclude = {
   budgetItems: {
@@ -90,58 +43,35 @@ type EventWithBudget = Prisma.EventGetPayload<{
 
 @Injectable()
 export class EventsService {
-  private readonly logger = new Logger(EventsService.name);
-  private localEventsStore: DefaultEventData[] = [...mockEventsData];
-
   constructor(
     private readonly prisma: PrismaService,
     private readonly budgetItemsService: BudgetItemsService,
   ) {}
 
   async findAll() {
-    try {
-      if (this.prisma.isDbAvailable()) {
-        const events = await this.prisma.event.findMany({
-          include: eventWithBudgetInclude,
-          orderBy: {
-            createdAt: 'desc',
-          },
-        });
+    this.ensureDatabaseAvailable();
 
-        if (events && events.length > 0) {
-          return events.map((e) => this.toResponse(e));
-        }
-      }
-    } catch (error) {
-      this.logger.warn(
-        `Database query failed, serving memory events fallback: ${error.message}`,
-      );
-    }
+    const events = await this.prisma.event.findMany({
+      include: eventWithBudgetInclude,
+      orderBy: { createdAt: 'desc' },
+    });
 
-    return this.localEventsStore;
+    return events.map((event) => this.toResponse(event));
   }
 
   async findOne(id: string) {
-    try {
-      if (this.prisma.isDbAvailable()) {
-        const event = await this.prisma.event.findUnique({
-          where: { id },
-          include: eventWithBudgetInclude,
-        });
+    this.ensureDatabaseAvailable();
 
-        if (event) {
-          return this.toResponse(event);
-        }
-      }
-    } catch (error) {
-      this.logger.warn(`Database query failed for findOne: ${error.message}`);
-    }
+    const event = await this.prisma.event.findUnique({
+      where: { id },
+      include: eventWithBudgetInclude,
+    });
 
-    const found = this.localEventsStore.find((e) => e.id === id);
-    if (!found) {
+    if (!event) {
       throw new NotFoundException(`Event with ID "${id}" not found.`);
     }
-    return found;
+
+    return this.toResponse(event);
   }
 
   /**
@@ -150,11 +80,7 @@ export class EventsService {
    * successful response always means the budget was actually stored.
    */
   async create(managedById: string, dto: CreateEventDto) {
-    if (!this.prisma.isDbAvailable()) {
-      throw new ServiceUnavailableException(
-        'Events cannot be created while the database is unavailable.',
-      );
-    }
+    this.ensureDatabaseAvailable();
 
     const startDate = new Date(dto.startDate);
     const endDate = dto.endDate ? new Date(dto.endDate) : startDate;
@@ -195,6 +121,14 @@ export class EventsService {
     );
 
     return this.toResponse(created);
+  }
+
+  private ensureDatabaseAvailable() {
+    if (!this.prisma.isDbAvailable()) {
+      throw new ServiceUnavailableException(
+        'Event data is temporarily unavailable. Please try again later.',
+      );
+    }
   }
 
   private toResponse(event: EventWithBudget): DefaultEventData {

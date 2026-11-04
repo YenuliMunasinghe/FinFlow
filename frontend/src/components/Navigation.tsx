@@ -113,7 +113,7 @@ export default function Navigation({ children, pageTitle, onAddTransactionSucces
           <nav className="px-3 space-y-1">
             {navLinks.map((link) => {
               const Icon = link.icon;
-              const isActive = pathname === link.href;
+              const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`);
               return (
                 <Link
                   key={link.href}
