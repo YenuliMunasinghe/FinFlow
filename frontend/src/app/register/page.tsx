@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Role, useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 
 export default function RegisterPage() {
@@ -15,7 +15,6 @@ export default function RegisterPage() {
   const [memberId, setMemberId] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<Role>(Role.COMMITTEE_MEMBER);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -32,7 +31,7 @@ export default function RegisterPage() {
     }
     setIsLoading(true);
     try {
-      await register(name, email, password, memberId, role);
+      await register(name, email, password, memberId);
       success('Account Created', `Welcome ${name}!`);
       router.push('/dashboard');
     } catch (err: any) {
@@ -71,31 +70,16 @@ export default function RegisterPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Member ID</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. EG/2024/9901"
-                value={memberId}
-                onChange={(e) => setMemberId(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Role</label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as Role)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
-              >
-                <option value={Role.PRESIDENT}>President</option>
-                <option value={Role.TREASURER}>Treasurer</option>
-                <option value={Role.COMMITTEE_MEMBER}>Member</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">Member ID</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. EG/2024/9901"
+              value={memberId}
+              onChange={(e) => setMemberId(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
+            />
           </div>
 
           <div>

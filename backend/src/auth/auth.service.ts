@@ -1,54 +1,17 @@
 import {
   Injectable,
   ConflictException,
+  ServiceUnavailableException,
   UnauthorizedException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Role } from './roles.decorator';
 import * as bcrypt from 'bcrypt';
-
-const SEED_USERS = [
-  {
-    id: 'user-pres-01',
-    email: 'president@finflow.org',
-    name: 'Kavinda Perera',
-    memberId: 'EG/2021/8842',
-    role: Role.PRESIDENT,
-    passwordHash:
-      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
-  },
-  {
-    id: 'user-treas-01',
-    email: 'treasurer@finflow.org',
-    name: 'Dinithi Silva',
-    memberId: 'EG/2021/7710',
-    role: Role.TREASURER,
-    passwordHash:
-      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
-  },
-  {
-    id: 'user-mem-01',
-    email: 'member@finflow.org',
-    name: 'Sandun Bandara',
-    memberId: 'EG/2022/1044',
-    role: Role.COMMITTEE_MEMBER,
-    passwordHash:
-      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
-  },
-  {
-    id: 'user-admin-01',
-    email: 'admin@finflow.org',
-    name: 'System Admin',
-    memberId: 'ADM/2020/001',
-    role: Role.ADMIN,
-    passwordHash:
-      '$2b$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeg6Lruj3vjPGga31lW',
-  },
-];
 
 @Injectable()
 export class AuthService {
@@ -60,24 +23,25 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('Email address is already registered.');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
     try {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email: dto.email },
-      });
-
-      if (existingUser) {
-        throw new ConflictException('Email address is already registered.');
-      }
-
-      const hashedPassword = await bcrypt.hash(dto.password, 10);
-
       const user = await this.prisma.user.create({
         data: {
           email: dto.email,
           passwordHash: hashedPassword,
           name: dto.name,
           memberId: dto.memberId,
-          role: dto.role || Role.COMMITTEE_MEMBER,
+          // Self-registration never grants elevated access.
+          role: Role.COMMITTEE_MEMBER,
         },
         select: {
           id: true,
@@ -93,72 +57,37 @@ export class AuthService {
       const accessToken = this.jwtService.sign(payload);
 
       return { user, accessToken };
-    } catch (err: any) {
-      if (err instanceof ConflictException) throw err;
-
-      this.logger.warn(`Database fallback for registration: ${err.message}`);
-      const fallbackUser = {
-        id: `user-${Date.now()}`,
-        email: dto.email,
-        name: dto.name,
-        memberId: dto.memberId || `REG/${Date.now()}`,
-        role: dto.role || Role.COMMITTEE_MEMBER,
-        createdAt: new Date(),
-      };
-      const payload = {
-        sub: fallbackUser.id,
-        email: fallbackUser.email,
-        role: fallbackUser.role,
-      };
-      const accessToken = this.jwtService.sign(payload);
-      return { user: fallbackUser, accessToken };
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'That email address or Member ID is already registered.',
+        );
+      }
+      throw err;
     }
   }
 
   async login(dto: LoginDto) {
     const identifier = (dto.memberId || dto.email || '').trim();
     if (!identifier) {
-      throw new UnauthorizedException('Please provide your Member ID or Email.');
-    }
-
-    let user: any = null;
-    try {
-      if (this.prisma.isDbAvailable()) {
-        user = await this.prisma.user.findFirst({
-          where: {
-            OR: [
-              { memberId: { equals: identifier, mode: 'insensitive' } },
-              { email: { equals: identifier, mode: 'insensitive' } },
-            ],
-          },
-        });
-      }
-    } catch (err: any) {
-      this.logger.warn(`Database query during login: ${err.message}`);
-    }
-
-    if (!user) {
-      user = SEED_USERS.find(
-        (u) =>
-          u.memberId.toLowerCase() === identifier.toLowerCase() ||
-          u.email.toLowerCase() === identifier.toLowerCase(),
+      throw new UnauthorizedException(
+        'Please provide your Member ID or Email.',
       );
     }
+
+    const user = await this.findUserForLogin(identifier);
 
     if (!user) {
       throw new UnauthorizedException('Invalid Member ID / Email or Password.');
     }
 
-    let isPasswordValid = false;
-    if (user.passwordHash) {
-      isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
-    }
-    if (
-      !isPasswordValid &&
-      (dto.password === 'Password123!' || dto.password === 'password')
-    ) {
-      isPasswordValid = true;
-    }
+    const isPasswordValid = await bcrypt.compare(
+      dto.password,
+      user.passwordHash,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid Member ID / Email or Password.');
@@ -185,5 +114,24 @@ export class AuthService {
       user: userWithoutPassword,
       accessToken,
     };
+  }
+
+  private async findUserForLogin(identifier: string) {
+    try {
+      return await this.prisma.user.findFirst({
+        where: {
+          OR: [
+            { memberId: { equals: identifier, mode: 'insensitive' } },
+            { email: { equals: identifier, mode: 'insensitive' } },
+          ],
+        },
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Database query failed during login: ${message}`);
+      throw new ServiceUnavailableException(
+        'Sign-in is temporarily unavailable. Please try again shortly.',
+      );
+    }
   }
 }
