@@ -1,12 +1,10 @@
 import {
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
-import { Role } from '../roles.decorator';
 
 export class RegisterDto {
   @IsEmail({}, { message: 'Please provide a valid email address.' })
@@ -25,11 +23,4 @@ export class RegisterDto {
   @IsString()
   @IsOptional()
   memberId?: string; // Society Member ID (e.g. SOC/2024/8842 or EG/2021/8842)
-
-  @IsEnum(Role, {
-    message:
-      'Valid role must be specified (ADMIN, PRESIDENT, TREASURER, COMMITTEE_MEMBER).',
-  })
-  @IsOptional()
-  role?: Role;
 }

@@ -32,7 +32,7 @@ interface AuthContextType {
   isLoading: boolean;
   isDemoMode: boolean;
   login: (identifier: string, password?: string) => Promise<void>;
-  register: (name: string, email: string, password: string, memberId?: string, role?: Role) => Promise<void>;
+  register: (name: string, email: string, password: string, memberId?: string) => Promise<void>;
   logout: () => void;
   switchDemoRole: (role: Role) => void;
 }
@@ -179,7 +179,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     password: string,
     memberId?: string,
-    role?: Role,
   ) => {
     setIsLoading(true);
     try {
@@ -193,7 +192,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: email.trim(),
           password,
           memberId: memberId?.trim(),
-          role: role || Role.COMMITTEE_MEMBER,
         }),
       });
 
